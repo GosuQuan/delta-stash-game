@@ -257,7 +257,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-23 02:42 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-09-23 02:58 Asia/Shanghai · 负责人：游戏grok
 
 ### 本轮已交付
 - **开箱灰阻塞**：根因 `setEvalMode→updateStats→usedCells` 在 grid 未初始化时抛错；已加空值保护 + boot try/catch。
@@ -265,10 +265,11 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 - **移动端沉浸**：`body.packing` 隐藏评测面板/帮助噪点/部分顶栏；仓库格 `fitCellSizeToWrap` 按容器宽适配，避免 8×8 右侧被裁。
 - **格子提示叠层**：`mini-shape` 叠在 `item-art` 右下角，暂存卡更扁。
 - **蜜月加长**：`ROUNDS 4→5`，`CASH_END ¥20k→¥45k`（对齐试玩「1 局就结束」反馈）。
+- **GitHub**：已推 `https://github.com/GosuQuan/delta-stash-game`（验收仍以本机 `?eval=1` 为准）。
+- **跟随球鉴宝**：贵货挑战 50% 抽跟随球 / 50% 答题；8–12s 点击命中；≥80% 保值或 +5–10%，50–79% 不变或 −10%，&lt;50% 降级或 −25–40%（不强制白）；跳过=失败降级；广告关时每日 1 次免费重试；钥匙/保级券共用。
 
 ### 进行中
-- GitHub 建仓上传（待 `gh auth`）
-- 金红「跟随球」小游戏（商业化需求已落，排在 UI 后）
+- 等测试玩家清档复验 + 跟随球手感反馈
 
 ### 下一里程碑（商业化已立项，未开工）
 - 主题季 + 玩法切换（赤金厅终局扩展）
@@ -278,6 +279,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 1. PC：Ctrl+F5，确认整页可滚、底栏/账本可见
 2. 移动/窄屏：`?eval=1`，开箱后仓库格完整、装箱时顶栏变干净
 3. 新档蜜月：应能打满约 5 场或现金近 ¥45k 才结束
+4. 贵货鉴宝：清档多开密封/高价货，应交替出现「答题」与「跟随金球」；跳过应按失败降级
 
 
 ---
@@ -299,7 +301,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | 广告 | 🔒 保持关 | `ADS_ENABLED=false`，评测期不开 |
 
 ### 已立项待开发（数值已提）
-1. 跟随球守住玩法（命中率→保值/增值/贬值；与答题共用触发）
+1. ~~跟随球守住玩法~~ → 已装入（见 ⑩）；待测试复验后改本表「贵货守住」行
 2. 终局：主题季 + 玩法切换（竞速/极限仓/只开密封限时/主题契约）
 3. itch 免费评测包（广告仍关）
 

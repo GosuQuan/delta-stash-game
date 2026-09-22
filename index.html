@@ -333,6 +333,13 @@
         </div>
         <p class="challenge-timer-text" id="challengeTimerText">8s</p>
         <div class="challenge-choices" id="challengeChoices"></div>
+        <div class="follow-ball-wrap" id="followBallWrap" hidden>
+          <div class="follow-ball-arena" id="followBallArena" aria-label="跟随球区域">
+            <button type="button" class="follow-ball" id="followBall" aria-label="点击命中小球"></button>
+          </div>
+          <p class="follow-ball-meter" id="followBallMeter">命中 0 / 0 · 准确率 —</p>
+          <button type="button" class="btn ghost" id="btnFollowBallSkip">跳过（按失败处理）</button>
+        </div>
         <div class="challenge-fail-actions" id="challengeFailActions" hidden>
           <button type="button" id="btnChallengeAdRetry" class="btn accent ad-chip" data-placement="ad_challenge_retry">▶ 看广告重试一次</button>
           <button type="button" id="btnChallengeKeyProtect" class="btn ghost">🔑 花1钥匙保级不降</button>

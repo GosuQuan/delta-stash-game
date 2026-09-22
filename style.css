@@ -1146,6 +1146,57 @@ kbd {
   box-shadow: 0 0 0 1px rgba(245, 197, 24, 0.35);
 }
 
+
+
+/* ----- Follow-ball challenge (金红守住 · 跟随球) ----- */
+.follow-ball-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.follow-ball-wrap[hidden] { display: none !important; }
+.follow-ball-arena {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 160, 23, 0.35);
+  background:
+    radial-gradient(circle at 30% 40%, rgba(78, 207, 136, 0.12), transparent 55%),
+    linear-gradient(160deg, #121816, #0a0e0c);
+  overflow: hidden;
+  touch-action: manipulation;
+}
+.follow-ball {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #f5d76e;
+  background: radial-gradient(circle at 35% 30%, #fff6c8, #d4a017 55%, #8a5a00);
+  box-shadow: 0 0 14px rgba(245, 215, 110, 0.65);
+  cursor: pointer;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  transition: box-shadow 0.08s;
+}
+.follow-ball:active,
+.follow-ball.is-hit {
+  box-shadow: 0 0 22px rgba(78, 207, 136, 0.9);
+  border-color: #4ecf88;
+}
+.follow-ball-meter {
+  font-size: 12px;
+  color: var(--text-dim, #8a968e);
+  text-align: center;
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .follow-ball-arena { height: 160px; }
+  .follow-ball { width: 42px; height: 42px; }
+}
+
 /* ----- Value-threshold timed challenge ----- */
 .challenge-modal .challenge-card {
   max-width: 420px;

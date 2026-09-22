@@ -112,8 +112,14 @@
     // Value-threshold only (not rarity color) — cheap purples / 小金 skip.
     VALUE_FACTOR: 0.45, // 0.45×30k ≈ ¥13.5k → clamped by MIN
     MIN_VALUE: 14000,
-    TIME_MS: 8000, // solvable in 5–8s; timer at upper end
+    TIME_MS: 8000, // quiz: solvable in 5–8s; timer at upper end
     KEY_PROTECT_COST: 1,
+    // Follow-ball (游戏商业化): alternate to quiz on value-threshold challenges
+    FOLLOW_BALL_CHANCE: 0.5,
+    FOLLOW_BALL_MS_MIN: 8000,
+    FOLLOW_BALL_MS_MAX: 12000,
+    FOLLOW_BALL_FREE_RETRY_DAY_KEY: "deltaStashFollowBallFreeDay",
+    FOLLOW_BALL_FREE_RETRY_PER_DAY: 1, // ads-off: 1 free retry / calendar day
   };
 
   /**
@@ -847,6 +853,11 @@
     challengeTimerBar: $("#challengeTimerBar"),
     challengeTimerText: $("#challengeTimerText"),
     challengeFailActions: $("#challengeFailActions"),
+    followBallWrap: $("#followBallWrap"),
+    followBallArena: $("#followBallArena"),
+    followBall: $("#followBall"),
+    followBallMeter: $("#followBallMeter"),
+    btnFollowBallSkip: $("#btnFollowBallSkip"),
     btnChallengeAdRetry: $("#btnChallengeAdRetry"),
     btnChallengeKeyProtect: $("#btnChallengeKeyProtect"),
     btnChallengeIapProtect: $("#btnChallengeIapProtect"),
@@ -2349,6 +2360,378 @@
     return entry;
   }
 
+
+  function applyChallengeValueMult(entry, mult) {
+    const cur = itemValue(entry);
+    entry.valueOverride = Math.max(80, Math.round(cur * mult));
+    entry._challenged = true;
+    return entry;
+  }
+
+  function followBallFreeRetryAvailable() {
+    try {
+      const day = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+      return localStorage.getItem(CHALLENGE_CFG.FOLLOW_BALL_FREE_RETRY_DAY_KEY) !== day;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function consumeFollowBallFreeRetry() {
+    try {
+      const day = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+      localStorage.setItem(CHALLENGE_CFG.FOLLOW_BALL_FREE_RETRY_DAY_KEY, day);
+    } catch (_) { /* ignore */ }
+  }
+
+  /** Soft settle from hit rate. <50% can still land here after player accepts fail. */
+  function settleFollowBallHitRate(entry, hitRate) {
+    if (hitRate >= 0.8) {
+      const boost = 1 + (0.05 + Math.random() * 0.05);
+      applyChallengeValueMult(entry, boost);
+      return { ok: true, label: `跟随成功 · 货值 ×${boost.toFixed(2)}` };
+    }
+    if (hitRate >= 0.5) {
+      if (Math.random() < 0.55) {
+        applyChallengeValueMult(entry, 0.9);
+        return { ok: true, label: "跟随一般 · 货值 −10%" };
+      }
+      entry._challenged = true;
+      return { ok: true, label: "跟随一般 · 货值不变" };
+    }
+    // <50%: one-tier drop OR −25–40% value (never forced to white via map alone)
+    if (Math.random() < 0.45) {
+      downgradeEntry(entry);
+      return { ok: false, label: "跟随失败 · 货物降级" };
+    }
+    const cut = 0.6 + Math.random() * 0.15; // keep 60–75% → −25%～−40%
+    applyChallengeValueMult(entry, cut);
+    return { ok: false, label: `跟随失败 · 货值 ×${cut.toFixed(2)}` };
+  }
+
+  function runFollowBallChallenge(entry) {
+    return new Promise((resolve) => {
+      if (!el.challengeModal || !el.followBallWrap || !el.followBallArena || !el.followBall) {
+        resolve(entry);
+        return;
+      }
+      challengeRetryUsed = false;
+
+      const def = getDef(entry.defId);
+      const rar = RARITY_MAP[def.rarity];
+      const threshold = challengeValueThreshold();
+      const duration =
+        CHALLENGE_CFG.FOLLOW_BALL_MS_MIN +
+        Math.floor(
+          Math.random() *
+            (CHALLENGE_CFG.FOLLOW_BALL_MS_MAX - CHALLENGE_CFG.FOLLOW_BALL_MS_MIN + 1)
+        );
+
+      if (el.challengeItemName) {
+        el.challengeItemName.innerHTML =
+          `${def.icon} ${def.name} <small style="color:${rar.color}">${rar.name}</small>`;
+      }
+      if (el.challengeItemValue) {
+        el.challengeItemValue.textContent =
+          `估价 ${formatYen(itemValue(entry))} · 鉴宝门槛 ${formatYen(threshold)} · 跟随球`;
+      }
+      if (el.challengeQuestion) {
+        el.challengeQuestion.textContent =
+          "跟随金球：限时点击命中移动的球（准确率决定货值）";
+      }
+      if (el.challengeChoices) {
+        el.challengeChoices.innerHTML = "";
+        el.challengeChoices.hidden = true;
+      }
+      if (el.challengeFailActions) el.challengeFailActions.hidden = true;
+      el.followBallWrap.hidden = false;
+
+      const arena = el.followBallArena;
+      const ball = el.followBall;
+      let hits = 0;
+      let attempts = 0;
+      let settled = false;
+      let moveId = null;
+      let tickId = null;
+      let failGraceId = null;
+      let lastRate = 0;
+      const started = Date.now();
+
+      function meter() {
+        lastRate = attempts > 0 ? hits / attempts : 0;
+        if (el.followBallMeter) {
+          el.followBallMeter.textContent =
+            `命中 ${hits} / ${attempts} · 准确率 ${
+              attempts ? Math.round(lastRate * 100) + "%" : "—"
+            }`;
+        }
+        return lastRate;
+      }
+
+      function placeBall() {
+        const aw = arena.clientWidth || 280;
+        const ah = arena.clientHeight || 160;
+        const pad = 22;
+        const x = pad + Math.random() * Math.max(8, aw - pad * 2);
+        const y = pad + Math.random() * Math.max(8, ah - pad * 2);
+        ball.style.left = `${x}px`;
+        ball.style.top = `${y}px`;
+      }
+
+      function paintTimer() {
+        const left = Math.max(0, duration - (Date.now() - started));
+        if (el.challengeTimerText) el.challengeTimerText.textContent = `${Math.ceil(left / 1000)}s`;
+        if (el.challengeTimerBar) {
+          el.challengeTimerBar.style.width = `${(left / duration) * 100}%`;
+        }
+        return left;
+      }
+
+      function stopMotion() {
+        if (moveId) clearInterval(moveId);
+        if (tickId) clearInterval(tickId);
+        moveId = null;
+        tickId = null;
+        ball.onclick = null;
+        arena.onclick = null;
+        if (el.btnFollowBallSkip) el.btnFollowBallSkip.onclick = null;
+      }
+
+      function cleanupAll() {
+        stopMotion();
+        if (failGraceId) clearTimeout(failGraceId);
+        failGraceId = null;
+        el.followBallWrap.hidden = true;
+        challengeActive = null;
+      }
+
+      function finishOk(label) {
+        if (settled) return;
+        settled = true;
+        cleanupAll();
+        el.challengeModal.hidden = true;
+        showToast(label);
+        resolve(entry);
+      }
+
+      function acceptFailSettle() {
+        if (settled) return;
+        settled = true;
+        cleanupAll();
+        const r = settleFollowBallHitRate(entry, lastRate);
+        el.challengeModal.hidden = true;
+        showToast(r.label);
+        resolve(entry);
+      }
+
+      function acceptDowngrade() {
+        // skip / hard accept: treat as fail tier (commercial)
+        if (settled) return;
+        settled = true;
+        cleanupAll();
+        downgradeEntry(entry);
+        el.challengeModal.hidden = true;
+        showToast("跟随失败 · 货物降级");
+        resolve(entry);
+      }
+
+      function finishProtect(via) {
+        if (settled) return;
+        settled = true;
+        cleanupAll();
+        entry._challenged = true;
+        el.challengeModal.hidden = true;
+        showToast(via === "key" ? "已消耗钥匙 · 保级成功" : "贵货保级成功");
+        scheduleSave();
+        resolve(entry);
+      }
+
+      function keyProtect() {
+        if (keys < CHALLENGE_CFG.KEY_PROTECT_COST) {
+          showToast("钥匙不足");
+          return;
+        }
+        keys -= CHALLENGE_CFG.KEY_PROTECT_COST;
+        updateKeysUI();
+        finishProtect("key");
+      }
+
+      function iapProtect() {
+        if (protectCharges > 0) {
+          protectCharges -= 1;
+          finishProtect("iap");
+          return;
+        }
+        const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
+        if (!sku) return;
+        showConfirm(
+          "确认补给（测试）",
+          `购买「${sku.name}」· ${sku.price}\n（占位：不会真实扣款）`,
+          () => finishProtect("iap")
+        );
+      }
+
+      function restartFollowRound() {
+        // clear fail UI and restart motion for remaining duration window
+        if (el.challengeFailActions) el.challengeFailActions.hidden = true;
+        el.followBallWrap.hidden = false;
+        if (el.challengeQuestion) {
+          el.challengeQuestion.textContent =
+            "跟随金球：限时点击命中移动的球（准确率决定货值）";
+        }
+        hits = 0;
+        attempts = 0;
+        meter();
+        placeBall();
+        const restart = Date.now();
+        const leftBudget = Math.max(6000, duration);
+        stopMotion();
+        wireHits();
+        moveId = setInterval(placeBall, 480);
+        tickId = setInterval(() => {
+          const left = Math.max(0, leftBudget - (Date.now() - restart));
+          if (el.challengeTimerText) el.challengeTimerText.textContent = `${Math.ceil(left / 1000)}s`;
+          if (el.challengeTimerBar) {
+            el.challengeTimerBar.style.width = `${(left / leftBudget) * 100}%`;
+          }
+          if (left <= 0) endByRate(false);
+        }, 100);
+        showToast("再试一次 · 跟随球");
+      }
+
+      function adRetry() {
+        if (FEATURES.ADS_ENABLED) {
+          if (challengeRetryUsed) return;
+          const retryRem = categoryRemaining("challenge_retry");
+          const retryOk = !challengeRetryUsed && retryRem > 0 && adsRemaining() > 0;
+          if (!retryOk) {
+            showToast("今日贵货重试广告已用完");
+            return;
+          }
+          offerRewardedAd(AD_PLACEMENTS.CHALLENGE_RETRY, () => {
+            challengeRetryUsed = true;
+            restartFollowRound();
+          });
+          return;
+        }
+        // ads off: 1 free retry / day
+        if (!followBallFreeRetryAvailable()) {
+          showToast("今日免费重试已用完");
+          return;
+        }
+        consumeFollowBallFreeRetry();
+        challengeRetryUsed = true;
+        restartFollowRound();
+      }
+
+      function showFailActions() {
+        stopMotion();
+        el.followBallWrap.hidden = true;
+        if (el.challengeChoices) el.challengeChoices.hidden = true;
+        if (el.challengeFailActions) el.challengeFailActions.hidden = false;
+        if (el.challengeQuestion) {
+          el.challengeQuestion.textContent =
+            `跟随准确率 ${Math.round(lastRate * 100)}% — 低于 50%，货物将贬值或降级。`;
+        }
+        const retryRem = categoryRemaining("challenge_retry");
+        const freeOk = !FEATURES.ADS_ENABLED && followBallFreeRetryAvailable();
+        const adOk =
+          FEATURES.ADS_ENABLED && !challengeRetryUsed && retryRem > 0 && adsRemaining() > 0;
+        if (el.btnChallengeAdRetry) {
+          if (FEATURES.ADS_ENABLED) {
+            el.btnChallengeAdRetry.hidden = false;
+            el.btnChallengeAdRetry.disabled = !adOk;
+            el.btnChallengeAdRetry.textContent = challengeRetryUsed
+              ? "已用过广告重试"
+              : adOk
+                ? `▶ 看广告重试一次（今日${retryRem}/2）`
+                : "今日贵货重试广告已用完";
+            if (adOk) logAdOfferOnce(AD_PLACEMENTS.CHALLENGE_RETRY, { rem: retryRem });
+          } else {
+            el.btnChallengeAdRetry.hidden = false;
+            el.btnChallengeAdRetry.disabled = !freeOk || challengeRetryUsed;
+            el.btnChallengeAdRetry.textContent =
+              freeOk && !challengeRetryUsed
+                ? "免费再试一次（今日 1 次）"
+                : "今日免费重试已用完";
+          }
+        }
+        if (el.btnChallengeKeyProtect) {
+          el.btnChallengeKeyProtect.disabled = keys < CHALLENGE_CFG.KEY_PROTECT_COST;
+          el.btnChallengeKeyProtect.textContent =
+            `🔑 花${CHALLENGE_CFG.KEY_PROTECT_COST}钥匙保级不降`;
+        }
+        if (el.btnChallengeIapProtect) {
+          const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
+          const canUseCharge = protectCharges > 0;
+          el.btnChallengeIapProtect.disabled = false;
+          el.btnChallengeIapProtect.textContent = canUseCharge
+            ? `使用保级券 ×${protectCharges}`
+            : `＄${(sku && sku.price) || "$1.99"} 单次贵货保级`;
+        }
+        const grace = FEATURES.ADS_ENABLED ? 10000 : 4000;
+        if (failGraceId) clearTimeout(failGraceId);
+        failGraceId = setTimeout(() => {
+          if (!settled) acceptFailSettle();
+        }, grace);
+      }
+
+      function endByRate(forceSkip) {
+        if (settled) return;
+        if (forceSkip) {
+          acceptDowngrade();
+          return;
+        }
+        meter();
+        if (lastRate >= 0.5) {
+          const r = settleFollowBallHitRate(entry, lastRate);
+          finishOk(r.label);
+          return;
+        }
+        // <50% → fail actions (retry / protect / accept soft settle)
+        showFailActions();
+      }
+
+      function wireHits() {
+        ball.onclick = (e) => {
+          e.stopPropagation();
+          attempts += 1;
+          hits += 1;
+          ball.classList.add("is-hit");
+          setTimeout(() => ball.classList.remove("is-hit"), 80);
+          meter();
+          placeBall();
+        };
+        arena.onclick = () => {
+          attempts += 1;
+          meter();
+        };
+        if (el.btnFollowBallSkip) {
+          el.btnFollowBallSkip.onclick = () => endByRate(true);
+        }
+      }
+
+      challengeActive = {
+        mode: "followball",
+        entry,
+        acceptDowngrade: acceptFailSettle, // accept fail button → soft tier settle
+        adRetry,
+        keyProtect,
+        iapProtect,
+      };
+
+      placeBall();
+      meter();
+      paintTimer();
+      wireHits();
+      moveId = setInterval(placeBall, 480);
+      tickId = setInterval(() => {
+        if (paintTimer() <= 0) endByRate(false);
+      }, 100);
+      el.challengeModal.hidden = false;
+    });
+  }
+
   function runItemChallenge(entry) {
     return new Promise((resolve) => {
       if (!el.challengeModal) {
@@ -2356,6 +2739,15 @@
         return;
       }
       challengeRetryUsed = false;
+      // 50% follow-ball vs quiz (游戏商业化 · 金红守住玩法轮换)
+      if (
+        el.followBallWrap &&
+        Math.random() < (CHALLENGE_CFG.FOLLOW_BALL_CHANCE || 0.5)
+      ) {
+        runFollowBallChallenge(entry).then(resolve);
+        return;
+      }
+      if (el.followBallWrap) el.followBallWrap.hidden = true;
       const quiz = pickChallengeQuestion(entry);
       const def = getDef(entry.defId);
       const rar = RARITY_MAP[def.rarity];
