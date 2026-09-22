@@ -837,6 +837,9 @@
     evalHoneymoonLine: $("#evalHoneymoonLine"),
     evalAdsLine: $("#evalAdsLine"),
     evalFxSelect: $("#evalFxSelect"),
+    btnEvalCash: $("#btnEvalCash"),
+    btnEvalForceBall: $("#btnEvalForceBall"),
+    btnEvalSoftChallenge: $("#btnEvalSoftChallenge"),
     dataPanel: $("#dataPanel"),
     dataPanelList: $("#dataPanelList"),
     limitedOfferPanel: $("#limitedOfferPanel"),
@@ -1457,7 +1460,12 @@
 
   function challengeValueThreshold() {
     const sealedFee = (CRATE_TIERS.sealed && CRATE_TIERS.sealed.fee) || 30000;
-    return Math.max(CHALLENGE_CFG.MIN_VALUE, Math.round(sealedFee * CHALLENGE_CFG.VALUE_FACTOR));
+    // Keys: MIN_VALUE / VALUE_FACTOR (were briefly mistyped → NaN → never challenge)
+    let thr = Math.max(CHALLENGE_CFG.MIN_VALUE, Math.round(sealedFee * CHALLENGE_CFG.VALUE_FACTOR));
+    if (evalMode && evalSoftChallenge) {
+      thr = Math.min(thr, 8000); // eval: cheaper sealed packs can still hit 鉴宝
+    }
+    return thr;
   }
 
   /** 贵货图鉴 threshold — sealed-rent-based (see CODEX_CFG). */
@@ -2740,9 +2748,12 @@
       }
       challengeRetryUsed = false;
       // 50% follow-ball vs quiz (游戏商业化 · 金红守住玩法轮换)
+      const followChance = (evalMode && evalForceFollowBall)
+        ? 1
+        : (CHALLENGE_CFG.FOLLOW_BALL_CHANCE || 0.5);
       if (
         el.followBallWrap &&
-        Math.random() < (CHALLENGE_CFG.FOLLOW_BALL_CHANCE || 0.5)
+        Math.random() < followChance
       ) {
         runFollowBallChallenge(entry).then(resolve);
         return;
@@ -3889,6 +3900,17 @@
   const EVAL_LS_KEY = "deltaStashEval";
   let evalMode = false;
   let evalAdsForcedOff = false;
+  let evalForceFollowBall = false; // eval: FOLLOW_BALL_CHANCE → 1
+  let evalSoftChallenge = false;   // eval: lower 鉴宝 threshold
+
+
+  function applyEvalUrlFlags() {
+    try {
+      const q = new URLSearchParams(location.search);
+      if (q.get("ball") === "1") evalForceFollowBall = true;
+      if (q.get("soft") === "1") evalSoftChallenge = true;
+    } catch (_) { /* ignore */ }
+  }
 
   function evalModeOn() {
     try {
@@ -3958,6 +3980,16 @@
     if (el.honeymoonHint && evalMode) {
       el.honeymoonHint.hidden = false;
       el.honeymoonHint.textContent = hm ? "新手保护（评测）" : (honeymoonEnded ? "蜜月已结束（评测）" : "蜜月状态（评测）");
+    }
+    if (el.btnEvalForceBall) {
+      el.btnEvalForceBall.setAttribute("aria-pressed", evalForceFollowBall ? "true" : "false");
+      el.btnEvalForceBall.classList.toggle("on", evalForceFollowBall);
+      el.btnEvalForceBall.textContent = evalForceFollowBall ? "强制跟随球 · 开" : "强制跟随球";
+    }
+    if (el.btnEvalSoftChallenge) {
+      el.btnEvalSoftChallenge.setAttribute("aria-pressed", evalSoftChallenge ? "true" : "false");
+      el.btnEvalSoftChallenge.classList.toggle("on", evalSoftChallenge);
+      el.btnEvalSoftChallenge.textContent = evalSoftChallenge ? "软鉴宝门槛 · 开" : "软鉴宝门槛";
     }
   }
 
@@ -6637,6 +6669,43 @@
         newSaveConfirm();
       });
     }
+    if (el.btnEvalCash) {
+      el.btnEvalCash.addEventListener("click", () => {
+        if (!evalMode) return;
+        if (typeof fx === "function") fx("uiClick");
+        cash += 50000;
+        if (typeof peakCash !== "undefined" && cash > peakCash) peakCash = cash;
+        showToast("评测：现金 +¥50,000");
+        if (typeof updateStats === "function") updateStats();
+        if (typeof updateCrateButtons === "function") updateCrateButtons();
+        if (typeof syncEvalPanel === "function") syncEvalPanel();
+        if (typeof syncDataPanel === "function") syncDataPanel();
+        if (typeof scheduleSave === "function") scheduleSave();
+      });
+    }
+    if (el.btnEvalForceBall) {
+      el.btnEvalForceBall.addEventListener("click", () => {
+        if (!evalMode) return;
+        if (typeof fx === "function") fx("uiClick");
+        evalForceFollowBall = !evalForceFollowBall;
+        showToast(evalForceFollowBall ? "评测：跟随球 100%" : "评测：跟随球恢复 50%");
+        syncEvalPanel();
+      });
+    }
+    if (el.btnEvalSoftChallenge) {
+      el.btnEvalSoftChallenge.addEventListener("click", () => {
+        if (!evalMode) return;
+        if (typeof fx === "function") fx("uiClick");
+        evalSoftChallenge = !evalSoftChallenge;
+        showToast(
+          evalSoftChallenge
+            ? "评测：鉴宝门槛降至 ≤¥8,000"
+            : "评测：鉴宝门槛恢复正式值"
+        );
+        syncEvalPanel();
+        if (typeof syncDataPanel === "function") syncDataPanel();
+      });
+    }
     if (el.btnReportBug) {
       el.btnReportBug.addEventListener("click", () => {
         if (typeof fx === "function") fx("uiClick");
@@ -6873,7 +6942,7 @@
   // ----- Init -----
   bind();
   try { loadSettleFxMode(); } catch (e) { console.warn("[boot] loadSettleFxMode", e); }
-  try { setEvalMode(evalModeOn()); } catch (e) { console.warn("[boot] setEvalMode", e); }
+  try { applyEvalUrlFlags(); setEvalMode(evalModeOn()); } catch (e) { console.warn("[boot] setEvalMode", e); }
   try { syncFxModeUI(); } catch (e) { console.warn("[boot] syncFxModeUI", e); }
   try { syncMuteUI(); } catch (e) { console.warn("[boot] syncMuteUI", e); }
   try { loadDailyBest(); updateDailyBestUI(); } catch (e) { console.warn("[boot] dailyBest", e); }

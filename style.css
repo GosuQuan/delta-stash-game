@@ -2959,3 +2959,14 @@ body.wealth-gold .top-bar {
 .item-card[data-rarity="yanjin"].card-shimmer::after {
   background: linear-gradient(115deg, transparent 30%, rgba(255,200,150,0.14) 48%, rgba(255,140,42,0.28) 52%, transparent 70%);
 }
+
+.eval-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+.eval-tools .btn.on {
+  border-color: #d4a017;
+  color: #f5d76e;
+}
