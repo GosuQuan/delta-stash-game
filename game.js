@@ -44,7 +44,7 @@
       },
     },
     rare: {
-      id: "rare", name: "精选柜", fee: 15000, count: [5, 7],
+      id: "rare", name: "精选柜", fee: 13800, count: [5, 7],
       valueScale: 1.06,
       allowed: ["white", "green", "blue", "purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong"],
       // more blue/purple/pink; occasional 小金/大金/炎金; tiny 小红; no 大红
@@ -5269,10 +5269,21 @@
       addLog(
         `第 ${round} 场租下<strong>${tier.name}</strong>（${feeTxt}），开出 ${loot.length} 件 · 货值约 ${formatYen(totalV)}`
       );
+      const warehouseCells = gridSize * gridSize;
+      const occupiedCells = usedCells();
+      const freeCells = warehouseCells - occupiedCells;
+      const stagingCellsNeeded = staging.reduce((sum, entry) => {
+        const def = getDef(entry.defId);
+        const shape = entry.shape || (def && def.shape);
+        return sum + (shape ? shapeCells(shape, entry.rot || 0).length : 0);
+      }, 0);
+      const spaceTight =
+        freeCells < stagingCellsNeeded ||
+        (warehouseCells > 0 && occupiedCells / warehouseCells >= 0.55);
       setActionDesc(
         feePaid > 0
-          ? `已付租金 ${formatYen(feePaid)}。空间紧张——优先装箱高价值；装不下的结算时遗弃。`
-          : `免费再租已使用。空间紧张——优先装箱高价值；装不下的结算时遗弃。`
+          ? `已付租金 ${formatYen(feePaid)}。${spaceTight ? "空间紧张——优先装箱高价值；装不下的结算时遗弃。" : "把货拖进仓库装箱，装不下的结算时遗弃。"}`
+          : `免费再租已使用。${spaceTight ? "空间紧张——优先装箱高价值；装不下的结算时遗弃。" : "把货拖进仓库装箱，装不下的结算时遗弃。"}`
       );
     } catch (err) {
       console.warn("[reveal] fatal", err);
