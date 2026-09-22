@@ -116,8 +116,8 @@
     KEY_PROTECT_COST: 1,
     // Follow-ball (游戏商业化): alternate to quiz on value-threshold challenges
     FOLLOW_BALL_CHANCE: 0.5,
-    FOLLOW_BALL_MS_MIN: 8000,
-    FOLLOW_BALL_MS_MAX: 12000,
+    FOLLOW_BALL_MS_MIN: 9000,
+    FOLLOW_BALL_MS_MAX: 14000,
     FOLLOW_BALL_FREE_RETRY_DAY_KEY: "deltaStashFollowBallFreeDay",
     FOLLOW_BALL_FREE_RETRY_PER_DAY: 1, // ads-off: 1 free retry / calendar day
   };
@@ -4382,8 +4382,20 @@
         el.btnSpeedOrganize.title = `一键整理（占位 ${ORGANIZE_IAP_PRICE} / 或花${ORGANIZE_KEY_COST}钥匙）`;
       }
     }
-    // Packing mode: collapse crate chrome on mobile
-    document.body.classList.toggle("packing", !!(crateOpenedThisRound && !extractedThisRound));
+    // Packing mode: collapse crate chrome on mobile; keep staging visible
+    const packingNow = !!(crateOpenedThisRound && !extractedThisRound);
+    const wasPacking = document.body.classList.contains("packing");
+    document.body.classList.toggle("packing", packingNow);
+    // Narrow immersion: auto-collapse eval/data panels when packing starts
+    // (CSS docks them as bottom sheet; do not force display:none via packing)
+    if (packingNow && !wasPacking) {
+      if (el.evalPanel) el.evalPanel.hidden = true;
+      if (el.dataPanel) el.dataPanel.hidden = true;
+      if (el.btnEvalMode && evalMode) {
+        el.btnEvalMode.setAttribute("aria-pressed", "false");
+        el.btnEvalMode.classList.remove("on");
+      }
+    }
     if (document.body.classList.contains("is-mobile") || window.matchMedia("(max-width: 700px)").matches) {
       requestAnimationFrame(() => fitCellSizeToWrap());
     }
@@ -6652,6 +6664,14 @@
     if (el.btnEvalMode) {
       el.btnEvalMode.addEventListener("click", () => {
         if (typeof fx === "function") fx("uiClick");
+        // Reopen collapsed panel while staying in eval mode (e.g. after packing auto-close)
+        if (evalMode && el.evalPanel && el.evalPanel.hidden) {
+          el.evalPanel.hidden = false;
+          el.btnEvalMode.setAttribute("aria-pressed", "true");
+          el.btnEvalMode.classList.add("on");
+          syncEvalPanel();
+          return;
+        }
         toggleEvalMode();
       });
     }

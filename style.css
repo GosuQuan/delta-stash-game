@@ -1170,8 +1170,8 @@ kbd {
 }
 .follow-ball {
   position: absolute;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 2px solid #f5d76e;
   background: radial-gradient(circle at 35% 30%, #fff6c8, #d4a017 55%, #8a5a00);
@@ -1194,7 +1194,7 @@ kbd {
 }
 @media (max-width: 700px) {
   .follow-ball-arena { height: 160px; }
-  .follow-ball { width: 42px; height: 42px; }
+  .follow-ball { width: 48px; height: 48px; }
 }
 
 /* ----- Value-threshold timed challenge ----- */
@@ -1813,7 +1813,7 @@ html.drag-scroll-lock {
 @media (max-width: 700px) and (max-height: 640px) {
   .stats .stat:nth-child(2) { display: none; } /* hide capacity if tiny */
   .grid-tips { display: none; }
-  body.packing .crate-panel { display: none; }
+  /* Keep .crate-panel visible while packing so #stagingArea stays usable */
 }
 
 
@@ -1860,7 +1860,8 @@ html.drag-scroll-lock {
     height: 4px;
   }
 
-  /* Immersion while packing: hide chrome not needed mid-play */
+  /* Immersion while packing: hide chrome not needed mid-play.
+     Do NOT hide .crate-panel — #stagingArea lives inside it. */
   body.packing .daily-activity,
   body.packing .save-hint,
   body.packing .brand .subtitle,
@@ -1877,27 +1878,61 @@ html.drag-scroll-lock {
   body.packing .grid-tips,
   body.packing .empty-hint,
   body.packing .info-panel .item-detail,
-  body.packing .info-panel .round-log,
-  body.packing .eval-panel,
-  body.packing .data-panel {
+  body.packing .info-panel .round-log {
     display: none !important;
   }
   body.packing .top-bar {
     padding: 4px 6px;
     gap: 4px 6px;
   }
+  /* Staging usable: room for item cards + mini-shape overlay */
   body.packing .crate-panel {
-    display: none !important;
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow: visible;
   }
+  body.packing .staging-header { margin-top: 0; }
   body.packing .staging-area {
-    min-height: 56px;
-    max-height: 72px;
+    min-height: 72px;
+    max-height: 112px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.packing .item-card {
+    width: 64px;
+    flex: 0 0 auto;
+  }
+  body.packing .item-art { height: 30px; }
+  body.packing .item-card .mini-shape { display: flex; }
+  body.packing .item-card .mini-shape span {
+    width: 4px;
+    height: 4px;
   }
   body.packing .grid-panel {
     flex: 1 1 auto;
   }
   body.packing .main-layout {
     gap: 2px;
+  }
+
+  /* Eval / data panels: bottom sheet so they never cover staging */
+  .eval-panel,
+  .data-panel {
+    top: auto;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    max-height: 42vh;
+    overflow-y: auto;
+    z-index: 95;
+  }
+  .data-panel {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 }
 
