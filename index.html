@@ -129,7 +129,9 @@
         <p class="career-line" id="careerLine">战绩 0 胜 / 0 负</p>
         <button type="button" id="btnAdFreeRent" class="btn ghost ad-chip" hidden data-placement="ad_free_rent">▶ 看广告 · 免费再租 1 次</button>
         <p class="ad-cap-line" id="adCapLine" hidden></p>
+      </section>
 
+      <section class="panel staging-panel" id="stagingPanel">
         <div class="panel-header staging-header">
           <h2>开箱暂存</h2>
           <span class="hint-inline" id="stagingCount">0 件</span>
@@ -378,7 +380,10 @@
     </div>
     
     <aside id="evalPanel" class="eval-panel" hidden>
-      <header>评测档</header>
+      <header class="eval-panel-header">
+        <span>评测档</span>
+        <button type="button" id="btnEvalPanelClose" class="btn ghost eval-close-btn" title="仅收起面板">关闭</button>
+      </header>
       <p id="evalHoneymoonLine">蜜月：—</p>
       <p id="evalAdsLine">广告：强制关闭</p>
       <label class="eval-fx-row">结算特效
@@ -391,6 +396,7 @@
         <button type="button" id="btnEvalCash" class="btn ghost">+¥5万现金</button>
         <button type="button" id="btnEvalForceBall" class="btn ghost" aria-pressed="false">强制跟随球</button>
         <button type="button" id="btnEvalSoftChallenge" class="btn ghost" aria-pressed="false">软鉴宝门槛</button>
+        <button type="button" id="btnEvalExit" class="btn ghost danger-text">退出评测</button>
       </div>
       <p class="eval-tip">URL <code>?eval=1</code> · 可加 <code>&amp;ball=1</code> / <code>&amp;soft=1</code> · 广告强制关 · 可清档</p>
     </aside>

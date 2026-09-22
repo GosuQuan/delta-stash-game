@@ -840,6 +840,9 @@
     btnEvalCash: $("#btnEvalCash"),
     btnEvalForceBall: $("#btnEvalForceBall"),
     btnEvalSoftChallenge: $("#btnEvalSoftChallenge"),
+    btnEvalPanelClose: $("#btnEvalPanelClose"),
+    btnEvalExit: $("#btnEvalExit"),
+    stagingPanel: $("#stagingPanel"),
     dataPanel: $("#dataPanel"),
     dataPanelList: $("#dataPanelList"),
     limitedOfferPanel: $("#limitedOfferPanel"),
@@ -3920,21 +3923,34 @@
     return false;
   }
 
-  function setEvalMode(on) {
+  function setEvalPanelVisible(vis) {
+    if (!el.evalPanel) return;
+    el.evalPanel.hidden = !vis;
+    // Button pressed state tracks panel visibility while evalMode stays on
+    if (el.btnEvalMode && evalMode) {
+      el.btnEvalMode.setAttribute("aria-pressed", vis ? "true" : "false");
+      el.btnEvalMode.classList.toggle("on", !!vis);
+    }
+  }
+
+  function setEvalMode(on, { showPanel } = {}) {
     evalMode = !!on;
     try {
       if (evalMode) localStorage.setItem(EVAL_LS_KEY, "1");
       else localStorage.removeItem(EVAL_LS_KEY);
     } catch (_) { /* ignore */ }
     document.body.classList.toggle("eval-mode", evalMode);
-    if (el.btnEvalMode) {
-      el.btnEvalMode.setAttribute("aria-pressed", evalMode ? "true" : "false");
-      el.btnEvalMode.classList.toggle("on", evalMode);
-    }
     if (el.btnDataPanel) el.btnDataPanel.hidden = !evalMode;
     if (el.btnEvalClear) el.btnEvalClear.hidden = !evalMode;
-    if (el.evalPanel) el.evalPanel.hidden = !evalMode;
     if (!evalMode && el.dataPanel) el.dataPanel.hidden = true;
+    // Mode ON → show panel by default (unless caller asks otherwise). Mode OFF → always hide.
+    const wantPanel = evalMode && (showPanel !== false);
+    if (el.evalPanel) el.evalPanel.hidden = !wantPanel;
+    if (el.btnEvalMode) {
+      const pressed = evalMode && wantPanel;
+      el.btnEvalMode.setAttribute("aria-pressed", pressed ? "true" : "false");
+      el.btnEvalMode.classList.toggle("on", !!pressed);
+    }
     // Force ads off while evaluating; restore prior flag when leaving if we flipped it.
     if (evalMode) {
       if (FEATURES.ADS_ENABLED) {
@@ -4389,13 +4405,12 @@
     // Narrow immersion: auto-collapse eval/data panels when packing starts
     // (CSS docks them as bottom sheet; do not force display:none via packing)
     if (packingNow && !wasPacking) {
-      if (el.evalPanel) el.evalPanel.hidden = true;
+      // Only on the transition into packing — never re-hide every frame
+      setEvalPanelVisible(false);
       if (el.dataPanel) el.dataPanel.hidden = true;
-      if (el.btnEvalMode && evalMode) {
-        el.btnEvalMode.setAttribute("aria-pressed", "false");
-        el.btnEvalMode.classList.remove("on");
-      }
     }
+    // Ensure packing class is on as soon as crate is open (staging CSS depends on it)
+    if (packingNow) document.body.classList.add("packing");
     if (document.body.classList.contains("is-mobile") || window.matchMedia("(max-width: 700px)").matches) {
       requestAnimationFrame(() => fitCellSizeToWrap());
     }
@@ -5098,6 +5113,7 @@
       }
       if (el.scanDoorBar) el.scanDoorBar.style.width = "100%";
       crateOpenedThisRound = true;
+      document.body.classList.add("packing");
       staging = [];
       renderStaging();
       Promise.resolve(runSequentialReveal(loot, tier, feePaid)).catch((err) => {
@@ -6664,15 +6680,30 @@
     if (el.btnEvalMode) {
       el.btnEvalMode.addEventListener("click", () => {
         if (typeof fx === "function") fx("uiClick");
-        // Reopen collapsed panel while staying in eval mode (e.g. after packing auto-close)
-        if (evalMode && el.evalPanel && el.evalPanel.hidden) {
-          el.evalPanel.hidden = false;
-          el.btnEvalMode.setAttribute("aria-pressed", "true");
-          el.btnEvalMode.classList.add("on");
+        // evalMode stays independent of panel visibility
+        if (!evalMode) {
+          setEvalMode(true); // enters mode + shows panel
+          return;
+        }
+        if (el.evalPanel && el.evalPanel.hidden) {
+          setEvalPanelVisible(true);
           syncEvalPanel();
           return;
         }
-        toggleEvalMode();
+        // Mode on + panel open → collapse panel only (do not exit eval)
+        setEvalPanelVisible(false);
+      });
+    }
+    if (el.btnEvalPanelClose) {
+      el.btnEvalPanelClose.addEventListener("click", () => {
+        if (typeof fx === "function") fx("uiClick");
+        setEvalPanelVisible(false);
+      });
+    }
+    if (el.btnEvalExit) {
+      el.btnEvalExit.addEventListener("click", () => {
+        if (typeof fx === "function") fx("uiClick");
+        setEvalMode(false);
       });
     }
     if (el.btnDataPanel) {
