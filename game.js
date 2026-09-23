@@ -4,6 +4,9 @@
 (() => {
   "use strict";
 
+  // Optional portal integration. The local/itch build deliberately has no SDK.
+  const platform = window.DeltaStashPlatform || null;
+
   // ----- Rarity: 大红 > 小红 > 炎金 > 大金 > 小金 > 粉 > 紫 > 蓝 > 绿 > 白 -----
   // Clearer grade labels (品级名 · 色阶); pink/yanjin fill blue→gold→red gaps.
   const RARITIES = [
@@ -350,11 +353,12 @@
   };
 
   const FEATURES = {
-    ADS_ENABLED: false,       // rewarded ads, caps line, ad chips — OFF for playtest
+    ADS_ENABLED: !!(platform && platform.supportsRewarded && platform.supportsRewarded()),
     CHALLENGE_ENABLED: true,  // keep quiz; ad-retry hidden when ads off
-    IAP_SHOP_ENABLED: true,   // stub shop stays available
+    // The local build keeps stubs for testing; portal builds never expose fake purchases.
+    IAP_SHOP_ENABLED: !platform || platform.provider() === "local",
     KEYS_ENABLED: true,       // key sinks still usable
-    ORGANIZE_STUB_ENABLED: true, // playtest: show「一键整理」IAP stub
+    ORGANIZE_STUB_ENABLED: !platform || platform.provider() === "local",
   };
 
   /**
@@ -4511,9 +4515,9 @@
     if (ok && typeof cb === "function") cb();
   }
 
-  /** Simulate rewarded video: per-category + total caps; stubs only (no real SDK) */
-  function offerRewardedAd(placementId, onSuccess) {
-    // Playtest: ads hard-disabled. Keep function so commercial can flip FEATURES.ADS_ENABLED.
+  /** Request a portal rewarded video; rewards are granted only after completion. */
+  async function offerRewardedAd(placementId, onSuccess) {
+    // Local/itch builds have no ad SDK and must remain completely playable.
     if (!FEATURES.ADS_ENABLED) {
       logMono("ad_cap", placementId, { reason: "ads_disabled" });
       showToast("广告已关闭（试玩）");
@@ -4547,7 +4551,17 @@
       updateAdCapUI();
       return;
     }
-    // Instant stub success
+    if (!platform || !platform.supportsRewarded || !platform.supportsRewarded()) {
+      showToast("当前渠道暂不支持广告奖励");
+      logMono("ad_cap", placementId, { reason: "sdk_unavailable" });
+      return;
+    }
+    const completed = await platform.requestRewarded();
+    if (!completed) {
+      showToast("广告暂不可用，请稍后再试");
+      logMono("ad_cap", placementId, { reason: "not_completed" });
+      return;
+    }
     day.byCat[cat] = usedCat + 1;
     if (cat !== "limited_refresh") {
       day.count = Object.keys(AD_CATEGORY_CAPS).reduce((s, k) => s + (day.byCat[k] || 0), 0);
@@ -4559,7 +4573,7 @@
       catUsed: day.byCat[cat],
       catCap: capCat,
     });
-    showToast("广告观看完成（模拟）");
+    showToast("广告观看完成，奖励已到账");
     updateAdCapUI();
     updateFreeRentOffer();
     updateWarehouseFullOffers();
@@ -6114,6 +6128,8 @@
       `第 ${round} 场：选柜付租 → 开箱装箱 → 转卖结算。贵柜风险更高。现金 ${formatYen(cash)}。`
     );
     maybeRollLimitedOffer();
+    // This click is a natural between-round break; portal SDKs decide actual pacing.
+    if (platform && typeof platform.requestMidgame === "function") platform.requestMidgame();
     scheduleSave();
   }
 
@@ -7038,6 +7054,7 @@
   }
   updateAdCapUI();
   updateLimitedOfferUI();
+  if (platform && typeof platform.gameplayStart === "function") platform.gameplayStart();
   if (!crateOpenedThisRound && !extractedThisRound) maybeRollLimitedOffer();
   try {
     if (!sessionStorage.getItem("auctionHelpSeen")) {
