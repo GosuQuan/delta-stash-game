@@ -179,6 +179,7 @@ ORGANIZE_STUB_ENABLED: true
 
 - `window.__monetizationLog`：环形数组（≤200）；经 `logMono(type, placementId, extra)` 写入
 - `?mono=1` 或 localStorage `deltaStashMonoDebug=1`：页内 mono 调试条
+- 匿名玩法统计（`?v=20260925i` 起）：`track(ev, fields)` → localStorage `deltaStashAnalyticsQueue`（≤200 条）+ `window.__analyticsLog`（≤300）。`ANALYTICS.ENDPOINT` 留空＝不发网络请求；`econ=econ-0925h`；评测档每条 `eval=1`；帮助页「参与匿名统计」关掉（`deltaStashAnalyticsOff=1`）后不记录。方案 / 清单：`docs/埋点方案.md`、`docs/埋点接入清单.md`；接收端：`tools/analytics/`。
 
 ---
 
@@ -264,9 +265,10 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-25 16:02 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-09-25 16:20 Asia/Shanghai · 负责人：游戏grok
 
 ### 本轮已交付
+- **匿名玩法统计接入（`?v=20260925i`）**：按 `docs/埋点接入清单.md` 接入 12 个事件（开柜 / 结算 / 守住挑战 / 破产 / 重整 / 新开档 / 拍卖厅解锁 / 峰值节点 / 扩容 / 整理 / 会话开始与结束），公共字段带 `econ=econ-0925h`、`save`、`eval`。`ENDPOINT` 暂时留空，事件只存进本机 localStorage 队列（最多 200 条），不发任何网络请求。评测档照常记录，每条带 `eval=1`。免费券开柜记 `rent_paid=0`、`discount=free_token`，方便从比值里排除。扩容只在「扩容」键现金扣款成功后记一次（`via=cash`），评测档下拉切尺寸不记。帮助页新增说明和「参与匿名统计」开关（默认开，关掉后清空队列、不再记录）。**数值未改动。** 新增 `tests/analytics.test.js`，`npm test` 六套全绿。
 - **扩容改分级永久现金价（`?v=20260925h`）**：游戏商业化反馈原来固定 ¥6,000 / 级太便宜（5→8 共 ¥18,000）。改为 5→6 **¥40,000**、6→7 **¥120,000**、7→8 **¥300,000**，永久拥有（存档新增 `ownedGridMax`，老档已扩的尺寸保留）。现金不够时扩容键显示价格并置灰，悬停提示还差多少，不会出现真钱价。确认时会再核一次现金，绝不扣成负数。顶栏「仓库」下拉原来能免费直接选 8×8，是个绕过扣费的漏洞：现在非评测只能选已拥有的尺寸（未拥有的带 🔒），评测档可自由切换，退出评测后回到已拥有尺寸；切回已拥有的更大尺寸免费。帮助说明和评测面板都列了三档价格。新增 `tests/expand_cost.test.js`（三档精确扣费、现金不足不扣、不为负、下拉锁、存档永久、老档兼容），`npm test` 五套全绿。
 - **手机格子放大 + 触屏拖拽抬高 + 试玩版去真钱价（`?v=20260925g`，`d13693b`）**：
   - 手机 / 平板格子：原因是移动端样式里 `--cell-size` 的 clamp 带 `!important`，压过了 JS 算出的尺寸（手机一直 26–34px）。现在 JS 用 important 统一接管所有布局，网格面板吃满剩余高度（ResizeObserver + 横竖屏切换）。实测装箱中 5×5：390×844 **34→64** · 360×780 33→64 · 375×667 64 · 414×896 64 · 340×620 28.5→54 · 800×1000 64 · 1366×768 64（不变）；8×8：360×780 41 · 390×844 45 · 1366×768 64。手机页面无滚动，结算键和评测面板都能点到。

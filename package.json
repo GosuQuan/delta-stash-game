@@ -3,7 +3,7 @@
   "private": true,
   "description": "仓储拍卖开箱 — static browser game (no build step). package.json only for tests.",
   "scripts": {
-    "test": "node tests/crate_milestones.test.js && node tests/version_check.test.js && node tests/ads_off.test.js && node tests/iap_off.test.js && node tests/expand_cost.test.js"
+    "test": "node tests/crate_milestones.test.js && node tests/version_check.test.js && node tests/ads_off.test.js && node tests/iap_off.test.js && node tests/expand_cost.test.js && node tests/analytics.test.js"
   },
   "devDependencies": {
     "jsdom": "^24.1.0"

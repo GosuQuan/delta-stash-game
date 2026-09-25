@@ -3387,3 +3387,17 @@ body.iap-off #btnShop,
 body.iap-off #shopModal {
   display: none !important;
 }
+
+/* 帮助页 · 匿名统计说明与开关（20260925i） */
+.analytics-optin {
+  margin: 4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.analytics-optin .analytics-note { margin: 0 0 8px; color: var(--text-dim); }
+.analytics-optin .analytics-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.analytics-optin .analytics-toggle input { width: 18px; height: 18px; margin: 0; accent-color: #4ecf88; }

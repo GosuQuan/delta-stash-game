@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260925h";
+  const BUILD_VERSION = "20260925i";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -367,6 +367,7 @@
     IAP_ENABLED: !!(platform && typeof platform.supportsPayments === "function" && platform.supportsPayments()),
     KEYS_ENABLED: true,       // key sinks still usable
     ORGANIZE_STUB_ENABLED: !platform || platform.provider() === "local",
+    ANALYTICS_ENABLED: true,  // anonymous gameplay stats (docs/埋点方案.md); ANALYTICS.ENDPOINT empty = local queue only
   };
 
   /**
@@ -1796,8 +1797,15 @@
     return typeof m === "number" && m > 0 ? m : 1;
   }
 
+  const PEAK_MARKS = [80000, 300000, 1000000]; // analytics peak_reach marks (not an economy value)
   function notePeakCash() {
     if (cash > peakCash) peakCash = cash;
+    for (const m of PEAK_MARKS) {
+      if (peakCash >= m && !analyticsSave.peakMarks.includes(m)) {
+        analyticsSave.peakMarks.push(m);
+        track("peak_reach", { mark: m, rounds_to: round, play_min: playMinutes(), steady_share: steadyShare(), restructure_n: analyticsSave.restructureN });
+      }
+    }
   }
 
   function applyPeakMilestoneReward(ms) {
@@ -1852,6 +1860,7 @@
       newly.push(t);
       queueCashFx({ pulse: "milestone", flash: "gold" });
       addLog(`解锁高级拍卖厅 <strong>${t.name}</strong>（峰值现金 ${formatYen(t.peakCash)}）`);
+      track("hall_unlock", { hall_id: t.id, hall_peak: t.peakCash, rounds_to: round, play_min: playMinutes(), restructure_n: analyticsSave.restructureN });
     }
     checkPeakMilestones();
     updateHallUI();
@@ -2485,6 +2494,8 @@
         return;
       }
       challengeRetryUsed = false;
+      const vBefore = itemValue(entry);
+      const tAsk = Date.now();
 
       const def = getDef(entry.defId);
       const rar = RARITY_MAP[def.rarity];
@@ -2580,6 +2591,7 @@
         cleanupAll();
         el.challengeModal.hidden = true;
         showToast(label);
+        trackChallenge(entry, "follow_ball", vBefore, tAsk, true, "none", lastRate);
         resolve(entry);
       }
 
@@ -2590,6 +2602,7 @@
         const r = settleFollowBallHitRate(entry, lastRate);
         el.challengeModal.hidden = true;
         showToast(r.label);
+        trackChallenge(entry, "follow_ball", vBefore, tAsk, false, "none", lastRate);
         resolve(entry);
       }
 
@@ -2601,14 +2614,16 @@
         downgradeEntry(entry);
         el.challengeModal.hidden = true;
         showToast("跟随失败 · 货物降级");
+        trackChallenge(entry, "follow_ball", vBefore, tAsk, false, "none", lastRate);
         resolve(entry);
       }
 
-      function finishProtect(via) {
+      function finishProtect(via, protectKind) {
         if (settled) return;
         settled = true;
         cleanupAll();
         entry._challenged = true;
+        trackChallenge(entry, "follow_ball", vBefore, tAsk, false, protectKind || via, lastRate);
         el.challengeModal.hidden = true;
         showToast(via === "key" ? "已消耗钥匙 · 保级成功" : "贵货保级成功");
         scheduleSave();
@@ -2628,7 +2643,7 @@
       function iapProtect() {
         if (protectCharges > 0) {
           protectCharges -= 1;
-          finishProtect("iap");
+          finishProtect("iap", "charge");
           return;
         }
         const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
@@ -2822,6 +2837,8 @@
         return;
       }
       if (el.followBallWrap) el.followBallWrap.hidden = true;
+      const vBefore = itemValue(entry);
+      const tAsk = Date.now();
       const quiz = pickChallengeQuestion(entry);
       const def = getDef(entry.defId);
       const rar = RARITY_MAP[def.rarity];
@@ -2915,6 +2932,7 @@
           cleanup();
           el.challengeModal.hidden = true;
           showToast("鉴宝成功 · 货物保留");
+          trackChallenge(entry, quiz.kind, vBefore, tAsk, true, "none", null);
           resolve(entry);
           return;
         }
@@ -2936,6 +2954,7 @@
         downgradeEntry(entry);
         el.challengeModal.hidden = true;
         showToast("鉴宝失败 · 货物降级");
+        trackChallenge(entry, quiz.kind, vBefore, tAsk, false, "none", null);
         resolve(entry);
       }
 
@@ -2973,10 +2992,11 @@
         });
       }
 
-      function finishProtect(via) {
+      function finishProtect(via, protectKind) {
         if (settled) return;
         settled = true;
         cleanup();
+        trackChallenge(entry, quiz.kind, vBefore, tAsk, false, protectKind || via, null);
         el.challengeModal.hidden = true;
         showToast(via === "key" ? "已消耗钥匙 · 保级成功" : "贵货保级成功");
         scheduleSave();
@@ -3001,7 +3021,7 @@
           protectCharges -= 1;
           logMono("iap_click", "iap_protect_once", { via: "charge", left: protectCharges });
           logMono("iap_complete", "iap_protect_once", { via: "charge", left: protectCharges });
-          finishProtect("iap");
+          finishProtect("iap", "charge");
           return;
         }
         const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
@@ -4302,6 +4322,211 @@
     }
   }
 
+  // ===== 匿名玩法统计（埋点）· 基于 tools/analytics/client-snippet.js（docs/埋点接入清单.md） =====
+  // 不收个人信息：无姓名 / 账号 / IP / 指纹；pid 是 localStorage 里的随机串。
+  // ENDPOINT 留空 = 只进本地队列（localStorage，≤ QUEUE_MAX 条），不发任何网络请求。
+  // 评测模式照常入队，每条带 eval: 1（查询默认排除）；玩家关闭「参与匿名统计」后什么都不记。
+  const ANALYTICS = {
+    SCHEMA: 1,
+    ECON: "econ-0925h",        // 经济数值版本：只有调数值时才改，和发版号无关
+    ENDPOINT: "",              // 接收端部署后填 https://delta-stash-analytics.<子域>.workers.dev/e ；留空 = 只进本地队列
+    OPT_OUT_KEY: "deltaStashAnalyticsOff", // "1" = 玩家关闭了「参与匿名统计」
+    PID_KEY: "deltaStashPid",
+    VISIT_KEY: "deltaStashVisit",          // {first, last} 日期
+    QUEUE_KEY: "deltaStashAnalyticsQueue", // 未发出的事件（本地队列 / 离线重试）
+    BATCH: 10,
+    FLUSH_MS: 30000,
+    LOCAL_MAX: 300,
+    QUEUE_MAX: 200,
+  };
+  const GENERAL_TIERS = new Set(["common", "rare", "sealed", "limited"]);
+  window.__analyticsLog = window.__analyticsLog || [];
+  let analyticsQueue = [];
+  let analyticsFlushTimer = null;
+  const analyticsSid = randomId();
+  const analyticsSessionT0 = Date.now();
+  let analyticsSessionRounds = 0;
+  // 存档里持久化（saveGame/loadGame），新开档时重置：
+  // { save, paidOpens, steadyOpens, playMs, restructureN, peakMarks: [] }
+  let analyticsSave = freshAnalyticsSave();
+  let roundCtx = null; // 开柜时记下，结算时用
+
+  function randomId() {
+    try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (_) { /* ignore */ }
+    return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+  }
+  function freshAnalyticsSave() {
+    return { save: randomId(), paidOpens: 0, steadyOpens: 0, playMs: 0, restructureN: 0, peakMarks: [] };
+  }
+  function analyticsOn() {
+    if (!FEATURES.ANALYTICS_ENABLED) return false;
+    try { return localStorage.getItem(ANALYTICS.OPT_OUT_KEY) !== "1"; } catch (_) { return true; }
+  }
+  function setAnalyticsOptIn(on) { // 帮助页开关「参与匿名统计」调用
+    try {
+      if (on) localStorage.removeItem(ANALYTICS.OPT_OUT_KEY);
+      else {
+        localStorage.setItem(ANALYTICS.OPT_OUT_KEY, "1");
+        localStorage.removeItem(ANALYTICS.QUEUE_KEY);
+      }
+    } catch (_) { /* ignore */ }
+    if (!on) {
+      analyticsQueue = [];
+      if (analyticsFlushTimer) { clearTimeout(analyticsFlushTimer); analyticsFlushTimer = null; }
+    }
+    syncAnalyticsToggle();
+  }
+  function syncAnalyticsToggle() {
+    const cb = document.getElementById("analyticsOptIn");
+    if (cb) cb.checked = analyticsOn();
+  }
+  function analyticsPid() {
+    try {
+      let p = localStorage.getItem(ANALYTICS.PID_KEY);
+      if (!p) { p = randomId(); localStorage.setItem(ANALYTICS.PID_KEY, p); }
+      return p;
+    } catch (_) { return "nostorage-" + analyticsSid; }
+  }
+  function analyticsDev() {
+    const w = window.innerWidth || 0;
+    const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || "") || ("ontouchstart" in window && w <= 820);
+    const vw = w <= 360 ? "le360" : w <= 420 ? "le420" : w <= 820 ? "le820" : "wide";
+    return { dev: mobile ? "mobile" : "pc", vw };
+  }
+  function analyticsBuild() { return BUILD_VERSION; }
+  function tierGroup(tierId) { return GENERAL_TIERS.has(tierId) ? "general" : "hall"; }
+  function playMinutes() { return Math.round((analyticsSave.playMs + (Date.now() - analyticsSessionT0)) / 60000); }
+  function steadyShare() { return analyticsSave.paidOpens > 0 ? +(analyticsSave.steadyOpens / analyticsSave.paidOpens).toFixed(3) : 1; }
+  /** 限时柜：今日剩余次数；专属柜（以后）用自己的每日计数；通用柜 null。只读，不改状态。 */
+  function dailyLeftFor(tierId) {
+    if (tierId === "limited") {
+      const used = limitedDailyKey === todayKeyLocal() ? limitedDailyCount : 0;
+      return Math.max(0, limitedDailyMax() - used);
+    }
+    const t = CRATE_TIERS[tierId];
+    if (t && !GENERAL_TIERS.has(tierId) && typeof t.dailyLeft === "function") {
+      try { return t.dailyLeft(); } catch (_) { return null; }
+    }
+    return null;
+  }
+
+  function track(ev, fields) {
+    try {
+      if (!analyticsOn()) return;
+      const hall = activeAuctionHall();
+      const e = Object.assign({
+        schema: ANALYTICS.SCHEMA, ev, ts: Date.now(),
+        pid: analyticsPid(), sid: analyticsSid, save: analyticsSave.save,
+        build: analyticsBuild(), econ: ANALYTICS.ECON,
+        round, cash: Math.round(cash), peak: Math.round(peakCash),
+        hall: hall ? hall.id : null, grid: gridSize,
+        honeymoon: honeymoonActive() ? 1 : 0, eval: evalMode ? 1 : 0,
+      }, analyticsDev(), fields || {});
+      window.__analyticsLog.push(e);
+      if (window.__analyticsLog.length > ANALYTICS.LOCAL_MAX) window.__analyticsLog.shift();
+      if (monoDebugOn() && el.monoDebug) {
+        el.monoDebug.hidden = false;
+        const line = document.createElement("div");
+        line.textContent = `📊 ${ev} ${JSON.stringify(fields || {})}`;
+        el.monoDebug.prepend(line);
+        while (el.monoDebug.children.length > 12) el.monoDebug.removeChild(el.monoDebug.lastChild);
+      }
+      // 本地队列（有界）；ENDPOINT 为空时只存不发
+      analyticsQueue.push(e);
+      if (analyticsQueue.length > ANALYTICS.QUEUE_MAX) analyticsQueue.splice(0, analyticsQueue.length - ANALYTICS.QUEUE_MAX);
+      persistAnalyticsQueue();
+      if (!ANALYTICS.ENDPOINT) return; // 接收端未部署：不发网络请求
+      if (analyticsQueue.length >= ANALYTICS.BATCH) flushAnalytics(false);
+      else if (!analyticsFlushTimer) analyticsFlushTimer = setTimeout(() => flushAnalytics(false), ANALYTICS.FLUSH_MS);
+    } catch (_) { /* analytics must never break gameplay */ }
+  }
+  function persistAnalyticsQueue() {
+    try { localStorage.setItem(ANALYTICS.QUEUE_KEY, JSON.stringify(analyticsQueue)); } catch (_) { /* ignore */ }
+  }
+  function restoreAnalyticsQueue() {
+    if (!analyticsOn()) { analyticsQueue = []; return; }
+    try {
+      const q = JSON.parse(localStorage.getItem(ANALYTICS.QUEUE_KEY) || "[]");
+      if (Array.isArray(q)) analyticsQueue = q.slice(-ANALYTICS.QUEUE_MAX);
+    } catch (_) { analyticsQueue = []; }
+  }
+  function flushAnalytics(useBeacon) {
+    if (analyticsFlushTimer) { clearTimeout(analyticsFlushTimer); analyticsFlushTimer = null; }
+    if (!ANALYTICS.ENDPOINT || !analyticsOn() || analyticsQueue.length === 0) return;
+    const batch = analyticsQueue.splice(0, 50);
+    persistAnalyticsQueue();
+    const body = JSON.stringify({ events: batch });
+    // text/plain = 简单请求，不触发 CORS 预检；sendBeacon 在关页时也能发出去
+    try {
+      if (useBeacon && navigator.sendBeacon) {
+        const ok = navigator.sendBeacon(ANALYTICS.ENDPOINT, new Blob([body], { type: "text/plain" }));
+        if (!ok) { analyticsQueue = batch.concat(analyticsQueue).slice(-ANALYTICS.QUEUE_MAX); persistAnalyticsQueue(); }
+        return;
+      }
+      fetch(ANALYTICS.ENDPOINT, { method: "POST", body, headers: { "Content-Type": "text/plain" }, keepalive: true, credentials: "omit" })
+        .then((r) => { if (!r.ok && r.status >= 500) throw new Error(String(r.status)); })
+        .catch(() => { analyticsQueue = batch.concat(analyticsQueue).slice(-ANALYTICS.QUEUE_MAX); persistAnalyticsQueue(); });
+    } catch (_) { analyticsQueue = batch.concat(analyticsQueue).slice(-ANALYTICS.QUEUE_MAX); persistAnalyticsQueue(); }
+  }
+
+  // ---- 挑战结果（守住挑战收尾时发一次；重试不算） ----
+  function trackChallenge(entry, kind, vBefore, tAsk, ok, protect, hitRate) {
+    try {
+      const vAfter = itemValue(entry);
+      if (roundCtx) { roundCtx.challenges += 1; if (ok) roundCtx.challenge_ok += 1; }
+      const d = getDef(entry.defId);
+      track("challenge_result", {
+        kind, rarity: d ? d.rarity : null, ok: ok ? 1 : 0,
+        result: vAfter > vBefore ? "up" : vAfter < vBefore ? "down" : "keep",
+        value_before: vBefore, value_after: vAfter,
+        hit_rate: hitRate == null ? null : +hitRate.toFixed(3),
+        protect: protect || "none", answer_ms: Date.now() - tAsk,
+      });
+    } catch (_) { /* ignore */ }
+  }
+
+  // ---- 会话 ----
+  function trackSessionStart(isNewSave) {
+    const today = new Date().toISOString().slice(0, 10);
+    let visit = null;
+    try { visit = JSON.parse(localStorage.getItem(ANALYTICS.VISIT_KEY) || "null"); } catch (_) { visit = null; }
+    const dayDiff = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+    const first = visit && visit.first ? visit.first : today;
+    const last = visit && visit.last ? visit.last : null;
+    if (analyticsOn()) {
+      try { localStorage.setItem(ANALYTICS.VISIT_KEY, JSON.stringify({ first, last: today })); } catch (_) { /* ignore */ }
+    }
+    track("session_start", {
+      is_new: !!isNewSave,
+      days_since_first: dayDiff(first, today),
+      days_since_last: last ? dayDiff(last, today) : null,
+    });
+    flushAnalytics(false);
+  }
+  let analyticsSessionEnded = false;
+  function trackSessionEnd() {
+    if (analyticsSessionEnded) return;
+    analyticsSessionEnded = true;
+    const state = bankrupt ? "bankrupt_modal"
+      : revealing ? "revealing"
+      : (crateOpenedThisRound && !extractedThisRound) ? "packing" : "idle";
+    track("session_end", {
+      session_rounds: analyticsSessionRounds,
+      session_s: Math.round((Date.now() - analyticsSessionT0) / 1000),
+      state,
+      last_net: roundCtx && roundCtx.lastNet != null ? roundCtx.lastNet : null,
+      streak: profitStreak > 0 ? profitStreak : -lossStreak,
+    });
+    flushAnalytics(true);
+  }
+  window.addEventListener("pagehide", trackSessionEnd);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") trackSessionEnd();
+    else if (analyticsSessionEnded) { analyticsSessionEnded = false; } // 切回前台：同一会话继续
+  });
+  restoreAnalyticsQueue();
+  // ===== 埋点代码结束 =====
+
   function todayKey() {
     const d = new Date();
     const y = d.getFullYear();
@@ -4398,6 +4623,8 @@
     clearWarehouseAndStaging();
     cash = grant;
     snapCashDisplay();
+    analyticsSave.restructureN += 1;
+    track("restructure", { grant, restructure_n: analyticsSave.restructureN });
     bankrupt = false;
     paidFeeThisRound = 0;
     crateOpenedThisRound = false;
@@ -4991,6 +5218,7 @@
       } else {
         logMono("iap_click", "iap_speed_organize_use", { source, packed: plan.length, left, totalVal });
       }
+      track("organize", { source: source === "free" ? "daily_free" : "iap", packed_n: plan.length, packed_value: totalVal, keys_left: keys });
       showToast(`整理计划：装入 ${plan.length} 件 · 总价值 ${formatYen(totalVal)} · 剩 ${left} 件`);
       runOrganizeAnimation(plan);
       return true;
@@ -5063,6 +5291,7 @@
           }
           showToast(`整理：装入 ${plan.length} 件 · ${formatYen(totalVal)} · 剩 ${left}`);
           logMono("iap_click", "organize_key_spend", { packed: plan.length });
+          track("organize", { source: "key", packed_n: plan.length, packed_value: totalVal, keys_left: keys });
           runOrganizeAnimation(plan);
           scheduleSave();
         }
@@ -5154,7 +5383,11 @@
     // Bankrupt when cash can't cover cheapest playable rent (and no free-rent charge).
     // Spec: cash ≤ 0 OR can't continue → offer 「清算重整」 once/day (no ads).
     if (cash < minPlayableFee() && freeCommonCharges <= 0 && freeRentCharges <= 0) {
+      const wasBankrupt = bankrupt;
       bankrupt = true;
+      if (!wasBankrupt) {
+        track("bankrupt", { total_pnl: totalPnL, restructure_avail: restructureAvailable(), last_tier: roundCtx && roundCtx.tier, rounds_since_start: round });
+      }
       el.bankruptCash.textContent = formatYen(cash);
       el.bankruptPnL.textContent = formatYen(totalPnL);
       updateBankruptModalUI();
@@ -5228,6 +5461,8 @@
     }
 
     let feePaid = 0;
+    let usedDisc = false;
+    const cashBeforeRent = cash;
     if (useFree) {
       consumeFreeToken(freeKind);
       feePaid = 0;
@@ -5235,10 +5470,9 @@
       showToast(`已使用${freeTokenLabel(freeKind)}`);
       // 免费券优先：不消耗下一柜折扣券
     } else {
-      const usedDisc = nextCrateDiscountPct > 0 && rent < rentBase;
+      usedDisc = nextCrateDiscountPct > 0 && rent < rentBase;
       const discPctUsed = nextCrateDiscountPct;
       if (usedDisc) nextCrateDiscountPct = 0;
-      const cashBeforeRent = cash;
       cash -= rent;
       // Store exactly what left the wallet (post discount + hall markup) — refunds use this.
       feePaid = cashBeforeRent - cash;
@@ -5269,6 +5503,29 @@
     if (!Array.isArray(loot) || loot.length === 0) {
       console.warn("[openCrate] empty roll for", tierId, "— adding fallback item");
       loot.push(makeFallbackLootEntry(tierId));
+    }
+    {
+      // Analytics: crate_open (free-token opens carry rent_paid 0 + discount "free_token" → excluded from ratios)
+      const rentPaid = feePaid;
+      const rentCashPct = !useFree && cashBeforeRent > 0 ? +(rentPaid / cashBeforeRent).toFixed(3) : 0;
+      if (!useFree) {
+        analyticsSave.paidOpens += 1;
+        if (rentCashPct <= 0.4) analyticsSave.steadyOpens += 1;
+      }
+      const discount = useFree ? "free_token" : usedDisc ? "perfect_pack"
+        : (honeymoonActive() && rentPaid < ((tier && tier.fee) || rentBase)) ? "honeymoon" : "none"; // tierFee already includes the honeymoon price
+      const rarityCount = {};
+      loot.forEach((e) => { const d = getDef(e.defId); const r = d ? d.rarity : "unknown"; rarityCount[r] = (rarityCount[r] || 0) + 1; });
+      roundCtx = {
+        tier: tierId, tier_group: tierGroup(tierId), rent_base: rentBase, rent_paid: rentPaid,
+        discount, honeymoon_open: honeymoonActive() ? 1 : 0, rent_cash_pct: rentCashPct,
+        t0: Date.now(), challenges: 0, challenge_ok: 0, lastNet: null,
+      };
+      track("crate_open", {
+        tier: tierId, tier_group: roundCtx.tier_group, rent_base: rentBase, rent_paid: rentPaid,
+        discount, rent_cash_pct: rentCashPct, items: loot.length, rarity: rarityCount,
+        daily_left: dailyLeftFor(tierId),
+      });
     }
     pendingRevealLoot = loot;
     revealGen += 1;
@@ -6332,6 +6589,22 @@
     else if (profit) profitStreak += 1;
     else profitStreak = 0;
 
+    {
+      analyticsSessionRounds += 1;
+      const c = roundCtx || {};
+      track("round_settle", {
+        tier: c.tier || null, tier_group: c.tier_group || null, honeymoon_open: c.honeymoon_open || 0,
+        discount: c.discount || null, rent_base: c.rent_base || null, rent_cash_pct: c.rent_cash_pct || 0,
+        rent_paid: fee, loot_value: lootValue, packed_value: packedValue,
+        discard_n: lost, discard_value: lostVal, bonus_n: bonusFromStaging.length,
+        util_pct: utilPct, perfect_pack: perfectPack ? 1 : 0, perfect_bonus: perfectBonus,
+        empty_refund: emptyCrateRefund, net,
+        challenges: c.challenges || 0, challenge_ok: c.challenge_ok || 0,
+        dur_s: c.t0 ? Math.round((Date.now() - c.t0) / 1000) : null,
+      });
+      if (roundCtx) roundCtx.lastNet = net;
+    }
+
     if (zeroDiscard && soldEntries.length > 0) recordDailyZeroDiscard();
     if (perfectPack) recordDailyPerfectPack();
 
@@ -6626,6 +6899,10 @@
   function newSaveConfirm() {
     if (!confirm("确定「新开档」？将清除本机存档（现金、战绩、账本、手气等），不可恢复。")) return;
     clearSave();
+    track("new_save", { prev_round: round, prev_peak: peakCash });
+    analyticsSave = freshAnalyticsSave();
+    analyticsSave.playMs = -(Date.now() - analyticsSessionT0); // play time counts from the new save
+    roundCtx = null;
     resetCareerState(false);
     el.bankruptModal.hidden = true;
     el.resultModal.hidden = true;
@@ -6736,9 +7013,16 @@
           updateStats();
           return;
         }
+        const cashBefore = cash;
+        const fromSize = gridSize;
         cash -= cost;
         logMono("expand_cash", `grid_${next}`, { cost, cashLeft: cash });
         applyExpand(next, "cash");
+        // Analytics: only a successful cash purchase emits warehouse_expand (dropdown / eval switches never do)
+        track("warehouse_expand", {
+          from: fromSize, to: next, via: "cash", cost, cash_before: cashBefore,
+          cost_cash_pct: cashBefore > 0 ? +(cost / cashBefore).toFixed(3) : null,
+        });
       }
     );
   }
@@ -6850,6 +7134,7 @@
             .map((e) => ({ uid: e.uid, defId: e.defId, rot: e.rot || 0, valueOverride: e.valueOverride }))
         : null,
       placed: serializePlaced(),
+      analytics: Object.assign({}, analyticsSave, { playMs: analyticsSave.playMs + (Date.now() - analyticsSessionT0) }),
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
@@ -7004,6 +7289,17 @@
       const pc = Number(data.peakCash);
       peakCash = Number.isFinite(pc) && pc > 0 ? pc : cash;
       if (cash > peakCash) peakCash = cash;
+    }
+    {
+      // Analytics per-save state; old saves get a new save id and don't re-fire peak marks already passed
+      const a = data.analytics;
+      if (a && typeof a === "object" && typeof a.save === "string" && a.save) {
+        analyticsSave = Object.assign(freshAnalyticsSave(), a);
+        if (!Array.isArray(analyticsSave.peakMarks)) analyticsSave.peakMarks = [];
+      } else {
+        analyticsSave = freshAnalyticsSave();
+        analyticsSave.peakMarks = PEAK_MARKS.filter((m) => peakCash >= m);
+      }
     }
     unlockedHalls = new Set(
       Array.isArray(data.unlockedHalls)
@@ -7631,6 +7927,14 @@
   updateLimitedOfferUI();
   if (platform && typeof platform.gameplayStart === "function") platform.gameplayStart();
   if (!crateOpenedThisRound && !extractedThisRound) maybeRollLimitedOffer();
+  try {
+    const cb = document.getElementById("analyticsOptIn");
+    if (cb) {
+      syncAnalyticsToggle();
+      cb.addEventListener("change", () => setAnalyticsOptIn(cb.checked));
+    }
+    trackSessionStart(!restored);
+  } catch (e) { console.warn("[boot] analytics", e); }
   try {
     if (!sessionStorage.getItem("auctionHelpSeen")) {
       el.helpModal.hidden = false;
