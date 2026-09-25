@@ -380,22 +380,23 @@
    */
   const HONEYMOON = {
     ROUNDS: 5,                 // rounds 1..5 (product window 3–5; was ending too fast in playtest)
-    CASH_END: 45000,           // end early once cash ≈ ¥45k (was ¥20k — felt like 1-round honeymoon)
-    FEE_MULT: { common: 0.65, rare: 0.80 }, // ~¥2,900 / ¥12,000; sealed/limited = 1.0
-    VALUE_SCALE_BONUS: { common: 0.30, rare: 0.24 }, // common 1.12→1.42, rare 1.06→1.30
-    // Push mid/high pieces so early opens feel juicy (pricier/exciting)
+    CASH_END: 35000,           // econ-retune r2: ¥45k→¥35k (conservative sim still hit ¥80k < 35 rounds)
+    // econ-retune round 2 targets (70% 鉴宝): common 1.30–1.45, rare 1.25–1.40, sealed/limited 1.10–1.20
+    FEE_MULT: { common: 0.70, rare: 0.80 }, // ¥3,150 / ¥11,050; sealed/limited = 1.0
+    VALUE_SCALE_BONUS: { common: 0, rare: 0 }, // was +0.30 / +0.24 (honeymoon ratio ~2.7 / ~2.15)
+    // Mild tilt toward mid pieces (was much stronger); rent discount carries most of the honeymoon edge
     WEIGHT_MULT: {
-      common: { white: 0.55, green: 0.85, blue: 1.75, purple: 2.0, pink: 1.35 },
+      common: { white: 1.0, green: 1.0, blue: 1.0, purple: 1.3, pink: 1.0 },
       rare: {
-        white: 0.55, green: 0.65, blue: 1.05, purple: 1.45, pink: 1.5,
-        xiaojin: 1.75, dajin: 1.45, yanjin: 1.15, xiaohong: 1.2,
+        white: 0.9, green: 0.9, blue: 1.0, purple: 1.1, pink: 1.1,
+        xiaojin: 1.15, dajin: 1.1, yanjin: 1.0, xiaohong: 1.0,
       },
       // 大红 is blocked in honeymoon; lift gold/小红 so sealed/limited stay ≥1.10 (econ-retune)
       sealed: { xiaojin: 1.3, dajin: 1.4, yanjin: 1.5, xiaohong: 1.6 },
       limited: { xiaojin: 1.6, dajin: 2.0, yanjin: 2.5, xiaohong: 3.5 },
     },
     JITTER: {
-      common: [0.95, 1.18],
+      common: [0.88, 1.04],
       rare: [0.93, 1.18],
     },
     // Fewer pieces → less discard pressure on 5×5 while values stay high
