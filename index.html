@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>仓储拍卖 · 集装箱开箱</title>
-  <link rel="stylesheet" href="style.css?v=20260925g" />
+  <link rel="stylesheet" href="style.css?v=20260925h" />
 </head>
 <body class="ads-off iap-off">
   <div id="app">
@@ -162,7 +162,7 @@
           <div class="grid-actions">
             <button type="button" id="btnRotate" class="btn ghost" title="旋转">↻ 旋转</button>
             <button type="button" id="btnSpeedOrganize" class="btn ghost inline" title="一键整理（今日免费 1 次）">⚡ 整理 今日免费</button>
-            <button type="button" id="btnExpand" class="btn ghost expand-btn" title="扩容仓库（现金）">⬆ 扩容</button>
+            <button type="button" id="btnExpand" class="btn ghost expand-btn" title="扩容仓库（永久，现金 ¥40,000 起）">⬆ 扩容 ¥4万</button>
             <button type="button" id="btnClearGrid" class="btn ghost danger-text" title="清空仓库">清空</button>
           </div>
         </div>
@@ -240,7 +240,7 @@
         <ol>
           <li>你有一笔启动资金。每场向房东支付<strong>租金</strong>租下一间仓储柜（普通 / 精选 / 密封）。现金较高时可能刷出<strong>限时豪华柜</strong>（倒计时内可租，错过后消失）。</li>
           <li>开箱后随机掉落货物。品级：<strong style="color:#ff2a2a">大红·神话</strong> &gt; <strong style="color:#e85a5a">小红·传说</strong> &gt; <strong style="color:#ff8c2a">炎金·至臻</strong> &gt; <strong style="color:#f5c518">大金·金耀</strong> &gt; <strong style="color:#d4a84b">小金·鎏金</strong> &gt; <strong style="color:#f472b6">粉·绮梦</strong> &gt; <strong style="color:#b46dff">紫·史诗</strong> &gt; <strong style="color:#4aa3e0">蓝·精品</strong> &gt; <strong style="color:#4ecf88">绿·良品</strong> &gt; 白·凡品。货池<strong>硬切割</strong>：普通偏友好外形、几乎不出金红；精选偶见小金；密封/限时金红目标更高、异形更多——仍可能亏本。装箱可全程手动，整理仅为便利。</li>
-          <li>把货物拖进<strong>转运仓库</strong>网格（默认 <strong>5×5</strong>，几乎每场都要弃货）；装不下的结算时遗弃。「扩容」<span class="iap-only">/「补给」</span>可 5→6→7→8（现金<span class="iap-only"> / 补给</span>）。</li>
+          <li>把货物拖进<strong>转运仓库</strong>网格（默认 <strong>5×5</strong>，几乎每场都要弃货）；装不下的结算时遗弃。「扩容」<span class="iap-only">/「补给」</span>可 5→6→7→8，<strong>永久</strong>（现金：6×6 ¥40,000 · 7×7 ¥120,000 · 8×8 ¥300,000<span class="iap-only"> / 或补给</span>）；顶栏「仓库」下拉只能选已拥有的尺寸。</li>
           <li><kbd>R</kbd> 旋转 · <kbd>Esc</kbd> 取消 · 双击仓库物品取回暂存。</li>
           <li>「转卖结算」：售出已装箱货物，减去本场租金，显示<strong>净利润/亏损</strong>。现金跨场累计。</li>
           <li><strong>完美装箱</strong>：仓库利用率 ≥85%，或本场零遗弃暂存货——结算额外奖励（装箱货值的 10%）并获得「下一柜折扣」券（下场租金 -12%，用一次）。</li>
@@ -386,6 +386,7 @@
       </header>
       <p id="evalHoneymoonLine">蜜月：—</p>
       <p id="evalAdsLine">广告：强制关闭</p>
+      <p id="evalExpandLine">扩容（永久·现金）：6×6 ¥40,000 · 7×7 ¥120,000 · 8×8 ¥300,000</p>
       <label class="eval-fx-row">结算特效
         <select id="evalFxSelect" aria-label="结算特效">
           <option value="smooth">流畅（默认）</option>
@@ -411,8 +412,8 @@
     </aside>
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script src="platform.js?v=20260925g"></script>
-  <script src="audio.js?v=20260925g"></script>
-  <script src="game.js?v=20260925g"></script>
+  <script src="platform.js?v=20260925h"></script>
+  <script src="audio.js?v=20260925h"></script>
+  <script src="game.js?v=20260925h"></script>
 </body>
 </html>

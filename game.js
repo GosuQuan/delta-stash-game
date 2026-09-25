@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260925g";
+  const BUILD_VERSION = "20260925h";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -418,7 +418,16 @@
   const PITY_THRESHOLD = 3; // soft boost after N consecutive below-cost settles
   const GRID_SIZES = [5, 6, 7, 8]; // default 5×5 — packing pressure every round
   const DEFAULT_GRID = 5;
-  const EXPAND_CASH_COST = 6000; // cheaper early expands; IAP / cash (no ad expand in playtest)
+  // Warehouse expansion — tiered, PERMANENT, paid with in-game cash (release h, 游戏商业化):
+  // 5→6 ¥40,000 · 6→7 ¥120,000 · 7→8 ¥300,000. Owned size persists (ownedGridMax); the header size
+  // dropdown only offers owned sizes outside eval mode.
+  const EXPAND_CASH_COSTS = { 6: 40000, 7: 120000, 8: 300000 }; // keyed by target size
+  function expandCashCost(nextSize) {
+    return EXPAND_CASH_COSTS[nextSize] != null ? EXPAND_CASH_COSTS[nextSize] : Infinity;
+  }
+  function formatYenShort(n) {
+    return n >= 10000 && n % 10000 === 0 ? `¥${n / 10000}万` : formatYen(n);
+  }
   const ORGANIZE_KEY_COST = 1; // spend keys for one-shot organize if not unlocked
   const ORGANIZE_IAP_PRICE = "$0.99";
   const ORGANIZE_DAILY_FREE_QUOTA = 1;
@@ -726,6 +735,7 @@
   let pendingRevealLoot = null;
   let revealGen = 0; // bumped per open / forced settle / new round → stale reveal loops stop
   let expandUses = 0; // monetization hook counter
+  let ownedGridMax = 5; // largest warehouse size bought (permanent; default 5×5)
   let keys = 0;
   let keyFragments = 0; // 3 → 1 key (开箱里程碑)
   let freeRentCharges = 0; // legacy / ad / codex free daily-tier rent
@@ -3471,14 +3481,23 @@
       }
     }
     if (el.btnExpand) {
-      const maxSize = GRID_SIZES[GRID_SIZES.length - 1];
-      el.btnExpand.disabled = gridSize >= maxSize || bankrupt;
-      const ni = GRID_SIZES.indexOf(gridSize);
-      const nsz = ni >= 0 && ni < GRID_SIZES.length - 1 ? GRID_SIZES[ni + 1] : null;
-      el.btnExpand.title = !nsz
-        ? "已达最大仓库"
-        : `扩容至 ${nsz}×${nsz}（${FEATURES.IAP_ENABLED ? (FEATURES.ADS_ENABLED ? "现金 / 广告 / 补给" : "现金 / 补给") : `现金 ${formatYen(EXPAND_CASH_COST)}`}）`;
+      const nsz = nextGridSize();
+      const owned = nsz != null && nsz <= ownedGridMax;
+      const price = nsz != null ? expandCashCost(nsz) : 0;
+      const short = !owned && nsz != null && cash < price;
+      // Not enough cash → price stays visible, button disabled (no real-money fallback)
+      el.btnExpand.disabled = nsz == null || bankrupt || (short && !FEATURES.IAP_ENABLED);
+      el.btnExpand.textContent = nsz == null ? "⬆ 已满级" : owned ? `⬆ ${nsz}×${nsz}` : `⬆ 扩容 ${formatYenShort(price)}`;
+      el.btnExpand.classList.toggle("short-cash", !!short);
+      el.btnExpand.title = nsz == null
+        ? "已达最大仓库 8×8"
+        : owned
+          ? `切换回已拥有的 ${nsz}×${nsz}（免费）`
+          : `永久扩容至 ${nsz}×${nsz}：现金 ${formatYen(price)}` +
+            (short ? `（现金不足，还差 ${formatYen(price - cash)}）` : "") +
+            (FEATURES.IAP_ENABLED ? " · 或补给" : "");
     }
+    syncGridSelectLock();
     updateFeePreview();
     updateCrateButtons();
     updateKeysUI();
@@ -4108,6 +4127,10 @@
       evalAdsForcedOff = false;
     }
     applyAdsMasterSwitch();
+    // Leaving eval: a free eval-only size larger than what the save owns is not kept
+    if (!evalMode && gridSize > ownedGridMax && el.warehouseGrid && el.warehouseGrid.children.length) {
+      switchGridSize(ownedGridMax);
+    }
     // Keep settle-FX control visible/emphasized in eval
     if (el.btnFxMode) el.btnFxMode.hidden = false;
     syncEvalPanel();
@@ -4131,6 +4154,10 @@
     if (el.evalHoneymoonLine) el.evalHoneymoonLine.textContent = hmText;
     if (el.evalAdsLine) {
       el.evalAdsLine.textContent = `广告：强制关闭（FEATURES.ADS_ENABLED=${FEATURES.ADS_ENABLED}）`;
+    }
+    const expLine = document.getElementById("evalExpandLine");
+    if (expLine) {
+      expLine.textContent = `扩容（永久·现金）：6×6 ${formatYen(EXPAND_CASH_COSTS[6])} · 7×7 ${formatYen(EXPAND_CASH_COSTS[7])} · 8×8 ${formatYen(EXPAND_CASH_COSTS[8])} · 已拥有 ${ownedGridMax}×${ownedGridMax}（评测可自由切换尺寸）`;
     }
     if (el.evalFxSelect) {
       const mode = settleFxMode === "fancy" ? "fancy" : "smooth";
@@ -6576,6 +6603,7 @@
     if (el.hallChip) el.hallChip.hidden = true;
     if (!keepGridPref) {
       gridSize = DEFAULT_GRID;
+      ownedGridMax = DEFAULT_GRID; // new save: back to 5×5, nothing owned
       if (el.gridSizeSelect) safeSetSelectValue(el.gridSizeSelect, DEFAULT_GRID);
     }
   }
@@ -6613,11 +6641,52 @@
     showToast("存档已清除，新档开始");
   }
 
-  /** Monetization hook: expand via IAP shop or cash (playtest: no expand ad). */
+  function nextGridSize() {
+    const i = GRID_SIZES.indexOf(gridSize);
+    return i >= 0 && i < GRID_SIZES.length - 1 ? GRID_SIZES[i + 1] : null;
+  }
+
+  /** Header size dropdown: outside eval mode only owned sizes are selectable (no free bypass of the expand cost). */
+  function syncGridSelectLock() {
+    const sel = el.gridSizeSelect;
+    if (!sel || !sel.options) return;
+    for (const o of sel.options) {
+      const v = +o.value;
+      const locked = !evalMode && v > ownedGridMax;
+      o.disabled = locked;
+      const base = `${v}×${v}`;
+      o.textContent = locked ? `${base} 🔒` : base;
+    }
+    sel.title = evalMode ? "评测：可自由切换仓库尺寸" : `仓库尺寸（已拥有至 ${ownedGridMax}×${ownedGridMax}；更大需「扩容」）`;
+  }
+
+  /** Resize the warehouse, returning placed items to staging (shared by dropdown / eval exit). */
+  function switchGridSize(n) {
+    for (const uid of [...placed.keys()]) {
+      const entry = removeFromGrid(uid);
+      if (entry) {
+        staging.push({ uid: entry.uid, defId: entry.defId, rot: entry.rot, valueOverride: entry.valueOverride });
+      }
+    }
+    if (el.gridSizeSelect) safeSetSelectValue(el.gridSizeSelect, n);
+    initGrid(n);
+    renderStaging();
+  }
+
+  /** Monetization hook: expand via cash (IAP shop only with a payment platform; no expand ad). */
   function tryExpandWarehouse() {
     const maxSize = GRID_SIZES[GRID_SIZES.length - 1];
     if (gridSize >= maxSize) {
       showToast("仓库已达最大规格");
+      return;
+    }
+    const nOwned = nextGridSize();
+    if (nOwned != null && nOwned <= ownedGridMax) {
+      // Already bought earlier (player switched down) — switching back up is free
+      switchGridSize(nOwned);
+      updateStats();
+      setActionDesc(`仓库切换为已拥有的 ${nOwned}×${nOwned}，装箱货物已退回暂存。`);
+      scheduleSave();
       return;
     }
     // Free trial: no real-money path — expand with in-game cash directly
@@ -6633,13 +6702,13 @@
     logMono("iap_offer", skuId, { next, price });
     showConfirm(
       `扩容至 ${next}×${next}`,
-      `补给内购 ${price}（占位）· 或 Shift+点击用现金 ${formatYen(EXPAND_CASH_COST)}。\n点确认 = 打开补给商店。`,
+      `补给内购 ${price}（占位）· 或 Shift+点击用现金 ${formatYen(expandCashCost(next))}。\n点确认 = 打开补给商店。`,
       () => {
         openShop();
         showToast(`请购买「仓库 → ${next}×${next}」（${price}）`);
       }
     );
-    setActionDesc(`扩容 ${next}×${next}：补给 ${price} / 现金 ${formatYen(EXPAND_CASH_COST)}（Shift+点击扩容）。`);
+    setActionDesc(`扩容 ${next}×${next}：补给 ${price} / 现金 ${formatYen(expandCashCost(next))}（Shift+点击扩容）。`);
   }
 
   function tryExpandWithCash() {
@@ -6647,15 +6716,28 @@
     if (gridSize >= maxSize) return;
     const idx = GRID_SIZES.indexOf(gridSize);
     const next = idx >= 0 && idx < GRID_SIZES.length - 1 ? GRID_SIZES[idx + 1] : gridSize + 1;
-    if (cash < EXPAND_CASH_COST) {
-      showToast(`现金不足（需 ${formatYen(EXPAND_CASH_COST)}）`);
+    if (next <= ownedGridMax) {
+      tryExpandWarehouse(); // owned → free switch
+      return;
+    }
+    const cost = expandCashCost(next);
+    if (!Number.isFinite(cost) || cash < cost) {
+      showToast(`现金不足：扩容至 ${next}×${next} 需 ${formatYen(cost)}（还差 ${formatYen(cost - cash)}）`);
+      updateStats();
       return;
     }
     showConfirm(
-      "现金扩容",
-      `花费 ${formatYen(EXPAND_CASH_COST)} 扩容至 ${next}×${next}？`,
+      "永久扩容",
+      `花费 ${formatYen(cost)} 永久扩容至 ${next}×${next}？\n（当前现金 ${formatYen(cash)}，扩容后 ${formatYen(cash - cost)}；已装箱货物退回暂存）`,
       () => {
-        cash -= EXPAND_CASH_COST;
+        // Re-check at confirm time — cash can never go negative
+        if (gridSize >= next || cash < cost) {
+          showToast(`现金不足（需 ${formatYen(cost)}）`);
+          updateStats();
+          return;
+        }
+        cash -= cost;
+        logMono("expand_cash", `grid_${next}`, { cost, cashLeft: cash });
         applyExpand(next, "cash");
       }
     );
@@ -6675,11 +6757,12 @@
       }
     }
     expandUses += 1;
+    ownedGridMax = Math.max(ownedGridMax, nextSize); // permanent
     if (el.gridSizeSelect) safeSetSelectValue(el.gridSizeSelect, nextSize);
     initGrid(nextSize);
     renderStaging();
     updateStats();
-    const viaLabel = via === "cash" ? "现金" : via === "iap" ? "内购" : "广告";
+    const viaLabel = via === "cash" ? "现金" : via === "iap" ? "补给" : "广告";
     addLog(`仓库扩容至 <strong>${nextSize}×${nextSize}</strong>（${viaLabel}）`);
     setActionDesc(`仓库已扩容为 ${nextSize}×${nextSize}。装箱货物已退回暂存。`);
     showToast(`扩容成功 → ${nextSize}×${nextSize}`);
@@ -6718,6 +6801,7 @@
       honeymoonGoodDropSeen,
       historyLog: historyLog.slice(0, HISTORY_MAX),
       gridSize,
+      ownedGridMax,
       expandUses,
       uidCounter,
       paidFeeThisRound,
@@ -6972,6 +7056,10 @@
       // migrate old 10/12 → 8, unknown → default 5
       gs = gs >= 8 ? 8 : gs >= 7 ? 7 : gs >= 6 ? 6 : DEFAULT_GRID;
     }
+    // Owned size is permanent. Old saves (no field) keep whatever size they already had.
+    const om = Number(data.ownedGridMax);
+    ownedGridMax = GRID_SIZES.includes(om) ? Math.max(om, DEFAULT_GRID) : Math.max(DEFAULT_GRID, gs);
+    if (!evalMode && gs > ownedGridMax) gs = ownedGridMax; // eval-only free size doesn't leak out
     gridSize = gs;
     if (el.gridSizeSelect) safeSetSelectValue(el.gridSizeSelect, gridSize);
 
@@ -7269,7 +7357,7 @@
       });
       el.btnExpand.title = FEATURES.IAP_ENABLED
         ? "扩容：点击打开补给；Shift+点击用现金"
-        : `扩容：花现金 ${formatYen(EXPAND_CASH_COST)} 升一级`;
+        : "扩容：花现金永久升一级（6×6 ¥4万 / 7×7 ¥12万 / 8×8 ¥30万）";
     }
 
     if (el.btnShop) {
@@ -7398,6 +7486,15 @@
     });
 
     el.gridSizeSelect.addEventListener("change", () => {
+      const want = +el.gridSizeSelect.value;
+      if (!evalMode && want > ownedGridMax) {
+        // Not owned: the dropdown must not bypass the expand cost
+        safeSetSelectValue(el.gridSizeSelect, gridSize);
+        const nxt = GRID_SIZES.find((g) => g > ownedGridMax);
+        showToast(`${want}×${want} 未解锁 · 用「扩容」花现金 ${formatYen(expandCashCost(nxt))} 升到 ${nxt}×${nxt}`);
+        syncGridSelectLock();
+        return;
+      }
       for (const uid of [...placed.keys()]) {
         const entry = removeFromGrid(uid);
         if (entry) {
