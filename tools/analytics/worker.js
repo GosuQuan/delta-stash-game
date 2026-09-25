@@ -11,7 +11,7 @@ const ALLOWED_ORIGINS = [
 const EVENTS = new Set([
   "crate_open", "round_settle", "challenge_result", "bankrupt", "restructure",
   "new_save", "hall_unlock", "peak_reach", "warehouse_expand", "organize",
-  "session_start", "session_end",
+  "session_start", "session_end", "ui_anomaly",
 ]);
 
 // 公共字段 -> 独立列；其余字段整体进 props（JSON）

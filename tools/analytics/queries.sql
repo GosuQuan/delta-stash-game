@@ -103,3 +103,9 @@ FROM first f GROUP BY f.d0 ORDER BY f.d0;
 -- Q9 样本量：各柜非蜜月、实付 > 0 的结算场数（几百场之前只看方向）
 SELECT tier, COUNT(*) AS n FROM v_settle
 WHERE econ = :econ AND honeymoon_open = 0 AND rent_paid > 0 AND empty_refund = 0 GROUP BY tier;
+
+-- Q10 界面异常：格子里的物品数和画出来的图标数对不上（按版本、设备、宽度）
+SELECT build, dev, vw, COUNT(*) AS n, COUNT(DISTINCT pid) AS players,
+  json_extract(props, '$.shape') AS shape, json_extract(props, '$.rotated') AS rotated
+FROM events WHERE ev = 'ui_anomaly' AND eval = 0
+GROUP BY build, dev, vw, shape, rotated ORDER BY n DESC;
