@@ -1,0 +1,12 @@
+name = "delta-stash-analytics"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "delta_stash_analytics"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+
+[triggers]
+# UTC 19:17 = 北京时间 03:17，每天汇总昨天的结算并删除 90 天前的原始事件
+crons = ["17 19 * * *"]
