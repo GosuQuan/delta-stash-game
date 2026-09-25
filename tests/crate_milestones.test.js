@@ -13,6 +13,11 @@
  * hall markup);  wallet delta at open == paid rent (minus any cash milestone granted in the same
  * open);  no refund on a round that has items.
  * Refund: forced 0-item round (every tier × discount) → settle refunds exactly the paid rent.
+ * 厅专属柜 (CRATE_TIERS entries with `exclusive`, e.g. 杂货柜 / 夜班柜 / 双联柜) run through the same matrix
+ * (daily counts reset per open; honeymoon mode skipped — unreachable below the ¥4万 unlock) plus:
+ * locked below the hall's peak threshold (no charge), per-crate daily cap (no charge once used up,
+ * independent of 限时柜), no free-rent tokens, and loot identical across halls / honeymoon state
+ * (no hall gold/red uplift, no honeymoon effects) under the same seed.
  *
  * Run:  npm install && npm test      (or: npm i --no-save jsdom@24 && node tests/crate_milestones.test.js)
  * Env:  GAME_DIR=<dir with index.html + game.js> to test another build.
@@ -36,7 +41,13 @@ const HOOK = `
     get openMilestonesClaimed() { return openMilestonesClaimed; }, get nextCrateDiscountPct() { return nextCrateDiscountPct; },
     CRATE_TIERS, AUCTION_HALL_CFG, OPEN_MILESTONE_CFG, PERFECT_PACK, HONEYMOON, FEATURES,
     openCrate, extract, nextRound, canPlace, placeItem, effectiveTierFee, tierFee, honeymoonActive,
-    activeAuctionHall, openMilestoneCash, getDef, gridSize: () => gridSize,
+    activeAuctionHall, openMilestoneCash, getDef, gridSize: () => gridSize, rollLoot,
+    get limitedDailyCount() { return limitedDailyCount; },
+    hallCrate: typeof hallCrateAvailable === "function" ? {
+      available: hallCrateAvailable, unlocked: hallCrateUnlocked, remaining: hallCrateRemaining,
+      used: hallCrateUsedToday, max: hallCrateDailyMax, freeToken: freeTokenForTier,
+      setFreeRent(n) { freeRentCharges = n; freeCommonCharges = n; freeRareCharges = n; },
+    } : null,
     setup(o) {
       cash = o.cash; peakCash = Math.max(o.peakCash || 0, cash);
       round = o.round; honeymoonEnded = !!o.honeymoonEnded;
@@ -52,6 +63,7 @@ const HOOK = `
       limitedOffer = o.limited ? { endAt: Date.now() + 600000 } : null;
       dailyActivityCompleted = true; dailyActivityJackpotRolled = true; dailyActivityJackpotPending = false;
       bankrupt = false;
+      if (typeof hallCrateDaily !== "undefined" && !o.keepDaily) hallCrateDaily = { key: todayKeyLocal(), counts: {} };
       selectedTier = o.tier;
     },
     forceEmptyRound() { staging = []; for (const uid of [...placed.keys()]) removeFromGrid(uid); },
@@ -139,7 +151,9 @@ async function main() {
     const w = makeWorld(seed++);
     const hallPeak = hall ? probe.AUCTION_HALL_CFG.TIERS.find((t) => t.id === hall).peakCash : 0;
     const modes = [{ honey: false }];
-    if (probe.tierFee(tier) * 1.2 < probe.HONEYMOON.CASH_END && tier !== "limited") modes.push({ honey: true });
+    const excl = !!probe.CRATE_TIERS[tier].exclusive;
+    // Honeymoon needs cash < CASH_END (¥35k) but 厅专属柜 unlock at peak ≥ ¥40k → never both in real play.
+    if (probe.tierFee(tier) * 1.2 < probe.HONEYMOON.CASH_END && tier !== "limited" && !excl) modes.push({ honey: true });
     for (const { honey } of modes) for (const m of MILESTONES) for (const d of DISC) {
       const o = {
         tier, hall, discount: d, pendingMilestone: m, totalCrateOpens: m - 1,
@@ -192,7 +206,75 @@ async function main() {
     refunds++;
   }
 
-  console.log(`opens=${opens} refundCases=${refunds} checks: pass=${pass} fail=${fail}`);
+  // 厅专属柜: unlock / daily cap / no free tokens / hall + honeymoon invariance
+  const EXCL = TIERS.filter((t) => probe.CRATE_TIERS[t].exclusive);
+  let exclCases = 0;
+  for (const tier of EXCL) {
+    const cfg = probe.CRATE_TIERS[tier];
+    const hallId = cfg.exclusive.hall;
+    const peak = probe.AUCTION_HALL_CFG.TIERS.find((t) => t.id === hallId).peakCash;
+    const fee = cfg.fee;
+    const tag = `[excl ${tier}]`;
+    check(fee > 0 && cfg.exclusive.dailyMax > 0, `${tag} has fee + dailyMax`);
+    // locked below the unlock peak: nothing charged, nothing opened
+    {
+      const w = makeWorld(seed++); const T = w.__T;
+      T.setup({ tier, hall: null, cash: peak - 1, peakCash: peak - 1, round: 30, honeymoonEnded: true, totalCrateOpens: 500, pendingMilestone: -1 });
+      check(!T.hallCrate.unlocked(tier), `${tag} locked at peak ${peak - 1}`);
+      const c0 = T.cash; T.openCrate();
+      check(T.cash === c0 && !T.crateOpenedThisRound, `${tag} locked open refused, no charge`);
+    }
+    // daily cap: dailyMax paid opens, then refused; 限时柜 count untouched; lower-hall crate open in top hall
+    {
+      const w = makeWorld(seed++); const T = w.__T;
+      const top = probe.AUCTION_HALL_CFG.TIERS[probe.AUCTION_HALL_CFG.TIERS.length - 1];
+      const base = { tier, hall: top.id, cash: 2000000, peakCash: top.peakCash, round: 40, honeymoonEnded: true, totalCrateOpens: 500, pendingMilestone: -1 };
+      T.setup(base);
+      T.hallCrate.setFreeRent(3);
+      check(T.hallCrate.freeToken(tier) === null, `${tag} free-rent tokens never apply`);
+      let limDrift = 0;
+      for (let k = 0; k < cfg.exclusive.dailyMax; k++) {
+        T.setup(Object.assign({}, base, { keepDaily: true, cash: T.cash }));
+        const lim0 = T.limitedDailyCount;
+        const r = await openOnce(w, Object.assign({}, base, { keepDaily: true, cash: T.cash }));
+        limDrift += T.limitedDailyCount - lim0;
+        check(r.ok && r.cash0 - r.cashAfterOpen === fee, `${tag} open ${k + 1}/${cfg.exclusive.dailyMax} charged ${r.cash0 - r.cashAfterOpen} == ${fee} in ${top.id}`);
+        check(T.hallCrate.used(tier) === k + 1, `${tag} daily count ${T.hallCrate.used(tier)} == ${k + 1}`);
+        greedyPack(T); T.extract(); await waitFor(() => !T.settleReplayActive, 2000); T.nextRound();
+      }
+      check(T.hallCrate.remaining(tier) === 0 && !T.hallCrate.available(tier), `${tag} cap reached`);
+      T.setup(Object.assign({}, base, { keepDaily: true, cash: T.cash }));
+      const c0 = T.cash; T.openCrate();
+      check(T.cash === c0 && !T.crateOpenedThisRound, `${tag} open over daily cap refused, no charge`);
+      check(limDrift === 0, `${tag} 限时柜 daily count untouched by exclusive opens (drift ${limDrift})`);
+    }
+    // same seed → identical loot with no hall vs top hall, and with a (contrived) honeymoon state
+    {
+      const rolls = [];
+      for (const st of [
+        { hall: null, round: 30, honeymoonEnded: true, cash: 500000, peakCash: peak },
+        { hall: "crimson_hall", round: 30, honeymoonEnded: true, cash: 500000, peakCash: 400000 },
+        { hall: hallId, round: 1, honeymoonEnded: false, cash: 20000, peakCash: peak },
+      ]) {
+        const w = makeWorld(seed); const T = w.__T;
+        T.setup(Object.assign({ tier, totalCrateOpens: 500, pendingMilestone: -1 }, st));
+        check(T.tierFee(tier) === fee, `${tag} fixed rent ${T.tierFee(tier)} == ${fee} (hall=${st.hall} hm=${T.honeymoonActive()})`);
+        w.eval(`Math.random = (${mulberry32.toString()})(4242);`);
+        rolls.push(JSON.stringify(T.rollLoot(tier).map((e) => [e.defId, e.valueOverride])));
+      }
+      seed++;
+      check(rolls[0] === rolls[1], `${tag} loot identical with/without hall bonus`);
+      check(rolls[0] === rolls[2], `${tag} loot identical with honeymoon state`);
+      const loot = JSON.parse(rolls[0]);
+      const [lo, hi] = cfg.count; const k = Math.max(1, cfg.rolls || 1);
+      check(loot.length >= lo * k && loot.length <= hi * k, `${tag} item count ${loot.length} in ${lo * k}–${hi * k}`);
+      check(loot.every(([id]) => cfg.allowed.includes(probe.getDef(id).rarity)), `${tag} rarities within allowed`);
+      if (cfg.shapes) check(loot.every(([id]) => cfg.shapes.includes(probe.getDef(id).shape)), `${tag} shapes within ${cfg.shapes.join("/")}`);
+    }
+    exclCases++;
+  }
+
+  console.log(`opens=${opens} refundCases=${refunds} exclusiveCrates=${exclCases} checks: pass=${pass} fail=${fail}`);
   if (fail) { console.log(failures.slice(0, 40).map((f) => "  FAIL " + f).join("\n")); process.exit(1); }
   console.log("OK");
 }

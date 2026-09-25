@@ -80,6 +80,58 @@
         pink: 0.85, purple: 1.7, blue: 1.4, green: 0, white: 0,
       },
     },
+
+    // ---- 厅专属柜 (hall-exclusive crates) · batch 1 — 游戏商业化 spec 2026-09-25 ----
+    // `exclusive.hall` = AUCTION_HALL_CFG id whose peak-cash threshold unlocks the crate (permanent,
+    // career peak); `dailyMax` = own per-crate daily cap (independent of 限时柜). Fixed rent: no
+    // honeymoon, no hall gold/red uplift, no rent markup, no rare-boost / free-rent tokens.
+    // Pricing: NO new value multiplier — items keep the price of the generic pool they come from
+    // (`priceFrom` → that tier's valueScale + jitter band, same as rolling it there). `poolFrom` =
+    // which generic pool's tier-tagged items are eligible; `shapes` = optional footprint filter.
+    // Targets (value ÷ rent, post-honeymoon, 70% 鉴宝, no hall) are hit ONLY via `mult` weights;
+    // final weights + sim table in docs/sim/results.md.  Batch 2 (铂金「古董柜」/ 赤金「命运柜」) =
+    // add entries here with exclusive.hall "platinum_hall" / "crimson_hall" — list UI, unlock,
+    // daily caps, save and sim pick them up automatically.
+    grocery: {
+      id: "grocery", name: "杂货柜", fee: 9000, count: [8, 10],
+      icon: "🧺", flavor: "零碎小件一大堆 · 白至紫 · 最好装满",
+      exclusive: { hall: "bronze_hall", dailyMax: 5 },
+      poolFrom: "common", priceFrom: "common", fxTier: "common",
+      // small footprints only: 1×1, 1×2 (either way), small L (corner) + 4-cell L family
+      shapes: ["1x1", "1x2", "2x1", "corner", "L", "L2", "J"],
+      allowed: ["white", "green", "blue", "purple"],
+      // tuned (sim, 5×5, 70% 鉴宝): ratio ≈1.12 / P(profit) ≈54% — nearly every open is a perfect pack
+      mult: {
+        dahong: 0, xiaohong: 0, yanjin: 0, dajin: 0, xiaojin: 0, pink: 0,
+        purple: 0.65, blue: 2.3, green: 1.0, white: 0.4,
+      },
+    },
+    nightshift: {
+      id: "nightshift", name: "夜班柜", fee: 21000, count: [3, 4],
+      icon: "🌙", flavor: "夜班押来的密封货 · 3–4 件 · 紫色起步",
+      exclusive: { hall: "jade_hall", dailyMax: 4 },
+      poolFrom: "sealed", priceFrom: "sealed", fxTier: "sealed",
+      // sealed pool minus its lowest two tiers (green, blue); white already absent from sealed
+      allowed: ["purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong", "dahong"],
+      // tuned: purple-heavy floor, thin gold/red tail → ratio ≈1.08 / P(profit) ≈37.5%
+      mult: {
+        dahong: 0.11, xiaohong: 0.16, yanjin: 0.22, dajin: 0.3, xiaojin: 0.3,
+        pink: 0.65, purple: 3.0, blue: 0, green: 0, white: 0,
+      },
+    },
+    twin: {
+      id: "twin", name: "双联柜", fee: 27600, count: [5, 7], rolls: 2,
+      icon: "🗃️", flavor: "两柜精选并一仓 · 10–14 件 · 装不下就弃",
+      exclusive: { hall: "silver_hall", dailyMax: 3 },
+      poolFrom: "rare", priceFrom: "rare", fxTier: "rare",
+      allowed: ["white", "green", "blue", "purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong"],
+      // 精选 weights nudged up (pink/purple/小金/大金) so greedy 5×5 packing (≈4.3 discarded) nets ≈1.02;
+      // all-sold (zero discard → perfect +10%) ≈1.12
+      mult: {
+        dahong: 0, xiaohong: 0.06, yanjin: 0.16, dajin: 0.33, xiaojin: 0.97,
+        pink: 1.4, purple: 1.7, blue: 1.4, green: 0.9, white: 0.7,
+      },
+    },
   };
 
   /** Limited-offer commercialization / pacing */
@@ -697,6 +749,27 @@
     return filtered.length ? filtered : pool;
   }
 
+  /** 厅专属柜? (CRATE_TIERS entry with `exclusive`) */
+  function isExclusiveCrate(tierId) {
+    const t = tierId ? CRATE_TIERS[tierId] : null;
+    return !!(t && t.exclusive);
+  }
+
+  /** Generic tier whose pricing / pool tags / FX a crate borrows (itself for the 4 generic crates). */
+  function crateBaseTier(tierId, key) {
+    const t = tierId ? CRATE_TIERS[tierId] : null;
+    return (t && t.exclusive && t[key]) || tierId;
+  }
+
+  /** Item pool for a crate: poolFor() on the borrowed generic pool, then the crate's shape filter. */
+  function poolForCrate(rarity, tierId) {
+    const t = tierId ? CRATE_TIERS[tierId] : null;
+    if (!t || !t.exclusive) return poolFor(rarity, tierId);
+    let pool = poolFor(rarity, t.poolFrom || tierId);
+    if (Array.isArray(t.shapes)) pool = pool.filter((d) => t.shapes.includes(d.shape));
+    return pool;
+  }
+
   // ----- State -----
   let gridSize = DEFAULT_GRID;
   let grid = [];
@@ -760,6 +833,9 @@
   let limitedDailyKey = ""; // YYYY-MM-DD local
   let limitedCooldownUntil = 0;
   let limitedTickTimer = null;
+
+  // 厅专属柜 per-crate daily open counts (own caps, independent of 限时柜), persisted in the save
+  let hallCrateDaily = { key: "", counts: {} }; // { key: YYYY-MM-DD local, counts: { tierId: n } }
 
   // Value-threshold timed challenge during reveal
   let challengeActive = null; // runtime UI state
@@ -1042,7 +1118,7 @@
   }
 
   function honeymoonGuaranteeRarity(tierId) {
-    if (!honeymoonActive() || honeymoonGoodDropSeen) return null;
+    if (!honeymoonActive() || honeymoonGoodDropSeen || isExclusiveCrate(tierId)) return null;
     const tier = CRATE_TIERS[tierId];
     if (!tier) return null;
     const available = HONEYMOON.GUARANTEE_RARITIES.filter((rarityId) => {
@@ -1073,6 +1149,7 @@
     const tier = CRATE_TIERS[tierId];
     if (!tier) return MIN_FEE;
     let fee = tier.fee;
+    if (tier.exclusive) return fee; // 厅专属柜: fixed rent (no honeymoon price, no hall markup)
     if (honeymoonActive()) {
       const m = HONEYMOON.FEE_MULT[tierId];
       if (m != null && m < 1) fee = Math.round(fee * m / 50) * 50; // snap to ¥50
@@ -1103,6 +1180,11 @@
   }
 
   function tierValueScale(tierId) {
+    if (isExclusiveCrate(tierId)) {
+      // 厅专属柜: same item price as its source pool — no extra multiplier, no honeymoon bonus
+      const src = CRATE_TIERS[crateBaseTier(tierId, "priceFrom")];
+      return src && src.valueScale != null && !src.exclusive ? src.valueScale : 1;
+    }
     const tier = CRATE_TIERS[tierId];
     let scale = tier && tier.valueScale != null ? tier.valueScale : 1;
     if (honeymoonActive()) {
@@ -1113,7 +1195,7 @@
   }
 
   function honeymoonWeightMult(tierId, rarityId) {
-    if (!honeymoonActive()) return 1;
+    if (!honeymoonActive() || isExclusiveCrate(tierId)) return 1;
     if (HONEYMOON.BLOCKED_RARITIES.includes(rarityId)) return 0;
     const table = HONEYMOON.WEIGHT_MULT[tierId];
     if (!table) return 1;
@@ -1139,10 +1221,13 @@
 
   function weightedPick(tierId) {
     const tier = CRATE_TIERS[tierId];
-    const honeymoonBlocked = honeymoonActive() ? new Set(HONEYMOON.BLOCKED_RARITIES) : new Set();
+    // 厅专属柜: tuned pools — no honeymoon block, no rare-boost widening, no hall gold/red uplift
+    const excl = !!tier.exclusive;
+    const honeymoonBlocked = honeymoonActive() && !excl ? new Set(HONEYMOON.BLOCKED_RARITIES) : new Set();
+    const boost = rareBoostCharges > 0 && !excl;
     // Rare-unit IAP: temporarily widen pool toward gold (still not guaranteed red)
     let allow = tier.allowed ? new Set(tier.allowed) : null;
-    if (rareBoostCharges > 0 && allow) {
+    if (boost && allow) {
       allow = new Set(allow);
       ["purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong"].forEach((id) => allow.add(id));
     }
@@ -1152,12 +1237,13 @@
       let m = tier.mult[r.id];
       if (m == null || m <= 0) {
         // boosted leak for cut rarities
-        if (rareBoostCharges > 0 && allow && allow.has(r.id)) {
+        if (boost && allow && allow.has(r.id)) {
           m = ({ purple: 0.8, xiaojin: 0.55, dajin: 0.28, xiaohong: 0.08 })[r.id] || 0;
         } else {
           return 0;
         }
       }
+      if (excl) return Math.max(0, r.weightBase * m * pityFactor(r.id));
       return Math.max(0, r.weightBase * m * pityFactor(r.id) * rareBoostFactor(r.id) * honeymoonWeightMult(tierId, r.id) * auctionHallWeightMult(r.id));
     });
     const total = weights.reduce((a, b) => a + b, 0);
@@ -1176,19 +1262,29 @@
   function rollLoot(tierId) {
     const tier = CRATE_TIERS[tierId];
     if (!tier) return [];
+    const excl = !!tier.exclusive;
+    // 厅专属柜 borrow jitter band + shape bias from their source pool (no honeymoon tweaks)
+    const priceTid = excl ? crateBaseTier(tierId, "priceFrom") : tierId;
+    const hmOn = honeymoonActive() && !excl;
     let [lo, hi] = tier.count || [3, 5];
-    if (honeymoonActive() && HONEYMOON.COUNT[tierId]) {
+    if (hmOn && HONEYMOON.COUNT[tierId]) {
       [lo, hi] = HONEYMOON.COUNT[tierId];
     }
-    const n = Math.max(1, lo + Math.floor(Math.random() * (Math.max(hi, lo) - lo + 1)));
+    // `rolls` > 1 (双联柜): several independent pool rolls land in the same staging
+    const rolls = Math.max(1, tier.rolls | 0 || 1);
+    const batchSizes = [];
+    for (let b = 0; b < rolls; b++) {
+      batchSizes.push(Math.max(1, lo + Math.floor(Math.random() * (Math.max(hi, lo) - lo + 1))));
+    }
+    const n = batchSizes.reduce((a, x) => a + x, 0);
     const scale = tierValueScale(tierId);
     // Tier-flavored jitter: common slightly lower; sealed/limited wider swing
     let jitterLo = 0.88, jitterHi = 1.05;
-    if (tierId === "rare") { jitterLo = 0.88; jitterHi = 1.08; }
-    else if (tierId === "sealed") { jitterLo = 0.8; jitterHi = 1.18; }
-    else if (tierId === "limited") { jitterLo = 0.75; jitterHi = 1.22; }
+    if (priceTid === "rare") { jitterLo = 0.88; jitterHi = 1.08; }
+    else if (priceTid === "sealed") { jitterLo = 0.8; jitterHi = 1.18; }
+    else if (priceTid === "limited") { jitterLo = 0.75; jitterHi = 1.22; }
     else { jitterLo = 0.86; jitterHi = 1.02; }
-    if (honeymoonActive() && HONEYMOON.JITTER[tierId]) {
+    if (hmOn && HONEYMOON.JITTER[tierId]) {
       [jitterLo, jitterHi] = HONEYMOON.JITTER[tierId];
     }
 
@@ -1231,24 +1327,26 @@
     const items = [];
     for (let i = 0; i < n; i++) {
       const rarity = weightedPick(tierId);
-      let pool = poolFor(rarity, tierId);
+      let pool = poolForCrate(rarity, tierId);
       if (!pool?.length) {
         // Fallback: any allowed rarity with items, then any item
         const allowed = (tier.allowed || []).slice();
         for (const r of allowed) {
-          pool = poolFor(r, tierId);
+          pool = poolForCrate(r, tierId);
           if (pool?.length) break;
         }
       }
       if (!pool?.length) pool = ITEM_DEFS;
       if (!pool?.length) continue;
-      const def = pickDefFromPool(pool, tierId);
+      const def = pickDefFromPool(pool, priceTid);
       if (!def) continue;
-      items.push(makeEntry(def));
+      const entry = makeEntry(def);
+      if (rolls > 1) entry._batch = i < batchSizes[0] ? 1 : 2; // 双联柜: 第一柜 / 第二柜 (display only)
+      items.push(entry);
     }
     // Paid open must never yield empty staging — force ≥1 filler
     if (items.length === 0 && ITEM_DEFS.length) {
-      const fallbackPool = poolFor((tier.allowed && tier.allowed[0]) || "white", tierId);
+      const fallbackPool = poolForCrate((tier.allowed && tier.allowed[0]) || "white", tierId);
       const def = (fallbackPool && fallbackPool[0]) || ITEM_DEFS[0];
       items.push(makeEntry(def));
     }
@@ -1278,7 +1376,7 @@
     const allowed = tier && tier.allowed ? order.filter((id) => tier.allowed.includes(id)) : order;
     let pool = null;
     for (const rid of allowed) {
-      pool = tier ? poolFor(rid, tierId) : byRarity[rid];
+      pool = tier ? poolForCrate(rid, tierId) : byRarity[rid];
       if (pool && pool.length) break;
     }
     if (!pool || !pool.length) pool = ITEM_DEFS;
@@ -1909,7 +2007,11 @@
     return (
       `<li>成交货值区间：<strong>${hall.valueRange || "—"}</strong></li>` +
       `<li>金红掉率提升：<strong>+${gr}%</strong></li>` +
-      `<li>租金上浮：<strong>${rent > 0 ? `+${rent}%` : "不加价"}</strong></li>`
+      `<li>租金上浮：<strong>${rent > 0 ? `+${rent}%` : "不加价"}</strong></li>` +
+      hallCrateIds()
+        .filter((tid) => CRATE_TIERS[tid].exclusive.hall === hall.id)
+        .map((tid) => `<li>专属柜：<strong>${CRATE_TIERS[tid].icon || ""} ${CRATE_TIERS[tid].name}</strong>（租金 ${formatYen(CRATE_TIERS[tid].fee)} · 每日 ${hallCrateDailyMax(tid)} 次 · 不吃厅加成）</li>`)
+        .join("")
     );
   }
 
@@ -2418,7 +2520,7 @@
     const def = getDef(entry.defId);
     if (!def) return entry;
     const nextR = DOWNGRADE_MAP[def.rarity] || "blue";
-    const pool = poolFor(nextR, selectedTier || "sealed");
+    const pool = poolFor(nextR, crateBaseTier(selectedTier, "poolFrom") || "sealed");
     const pick = pool[Math.floor(Math.random() * pool.length)] || def;
     const oldV = itemValue(entry);
     const newV = Math.max(80, Math.round(oldV * (0.42 + Math.random() * 0.12)));
@@ -3400,7 +3502,8 @@
     const freeKind = freeTokenForTier(selectedTier);
     const can = !!freeKind || cash >= fee;
     const warm = honeymoonActive() && (selectedTier === "common" || selectedTier === "rare");
-    const discTag = disc ? ` · 下一柜-${Math.round(nextCrateDiscountPct * 100)}%` : "";
+    const discTag = (disc ? ` · 下一柜-${Math.round(nextCrateDiscountPct * 100)}%` : "") +
+      (isExclusiveCrate(selectedTier) ? ` · 今日剩 ${hallCrateRemaining(selectedTier)}/${hallCrateDailyMax(selectedTier)}` : "");
     if (freeKind) {
       el.feePreview.textContent = `${freeTokenLabel(freeKind)}（余额 ${formatYen(cash)}）${disc ? " · 折扣券保留" : ""}`;
       el.feePreview.className = "fee-preview afford";
@@ -4086,6 +4189,60 @@
     return false;
   }
 
+  /** Strict URL gate for eval-only test tools (localStorage eval flag alone is NOT enough). */
+  function evalUrlParamOn() {
+    try { return /(?:\?|&)eval=1(?:&|$)/.test(location.search); } catch (_) { return false; }
+  }
+
+  /**
+   * 评测「重置今日次数」: every per-day limit back to a fresh day — each 厅专属柜 count, 限时柜 count
+   * (+ expire cooldown), daily free 一键整理, 清算重整, follow-ball free retry, ad daily caps, and the
+   * daily quest / jackpot roll. Cash, career, codex, milestones and today's best drop are untouched.
+   */
+  function resetAllDailyCountsForEval() {
+    const today = todayKeyLocal();
+    hallCrateDaily = { key: today, counts: {} };
+    limitedDailyKey = today;
+    limitedDailyCount = 0;
+    limitedCooldownUntil = 0;
+    organizeFreeUsedDay = "";
+    adOfferLogged = {};
+    for (const k of [ORGANIZE_FREE_DAY_KEY, RESTRUCTURE.DAY_KEY, CHALLENGE_CFG.FOLLOW_BALL_FREE_RETRY_DAY_KEY, AD_DAY_KEY]) {
+      try { localStorage.removeItem(k); } catch (_) { /* ignore */ }
+    }
+    dailyActivityKey = today;
+    dailyActivityCount = 0;
+    dailyActivityCompleted = false;
+    dailyActivityJackpotRolled = false;
+    dailyActivityJackpotPending = false;
+  }
+
+  function mountEvalDailyReset() {
+    if (!evalUrlParamOn() || document.getElementById("btnEvalResetDaily")) return;
+    const tools = document.getElementById("evalTools");
+    if (!tools) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "btnEvalResetDaily";
+    btn.className = "btn ghost";
+    btn.textContent = "重置今日次数";
+    btn.title = "评测：专属柜 / 限时柜 / 免费整理 / 清算重整 / 每日任务等今日次数全部清零";
+    btn.addEventListener("click", () => {
+      if (!evalMode || !evalUrlParamOn()) return;
+      if (typeof fx === "function") fx("uiClick");
+      resetAllDailyCountsForEval();
+      showToast("评测：今日次数已重置");
+      addLog("评测：今日次数已重置（专属柜 / 限时柜 / 免费整理 / 清算重整 / 每日任务）", false);
+      updateStats();
+      updateLimitedOfferUI();
+      if (typeof updateBankruptModalUI === "function" && el.bankruptModal && !el.bankruptModal.hidden) updateBankruptModalUI();
+      saveGame();
+    });
+    const exit = document.getElementById("btnEvalExit");
+    if (exit && exit.parentNode === tools) tools.insertBefore(btn, exit);
+    else tools.appendChild(btn);
+  }
+
   function setEvalPanelVisible(vis) {
     if (!el.evalPanel) return;
     el.evalPanel.hidden = !vis;
@@ -4197,7 +4354,10 @@
       `<li>现金：<strong>${formatYen(cash)}</strong>（峰值 ${formatYen(peakCash)}）</li>` +
       `<li>拍卖厅：<strong>${hall ? hall.name : "未解锁"}</strong></li>` +
       `<li>每日：<strong>${dailyBit}</strong></li>` +
-      `<li>连盈/连亏：${profitStreak} / ${lossStreak}</li>`;
+      `<li>连盈/连亏：${profitStreak} / ${lossStreak}</li>` +
+      `<li>今日次数：限时 ${limitedDailyCount}/${limitedDailyMax()}` +
+      hallCrateIds().map((tid) => ` · ${CRATE_TIERS[tid].name} ${hallCrateUsedToday(tid)}/${hallCrateDailyMax(tid)}${hallCrateUnlocked(tid) ? "" : "🔒"}`).join("") +
+      `</li>`;
   }
 
   function buildBugDiagnostics() {
@@ -4223,6 +4383,8 @@
         count: dailyActivityCount,
         completed: dailyActivityCompleted,
         jackpotRolled: dailyActivityJackpotRolled,
+        limited: limitedDailyCount,
+        hallCrates: Object.assign({}, (hallCrateDaily && hallCrateDaily.counts) || {}),
       },
       gridSize: (typeof gridSize !== "undefined") ? gridSize : null,
       selectedTier: (typeof selectedTier !== "undefined") ? selectedTier : null,
@@ -5097,6 +5259,185 @@
     });
   }
 
+  // ----- 厅专属柜: unlock (career peak) / per-crate daily caps / crate list -----
+  function hallCrateIds() {
+    return Object.keys(CRATE_TIERS).filter(isExclusiveCrate);
+  }
+
+  function hallCrateHall(tid) {
+    const t = CRATE_TIERS[tid];
+    return t && t.exclusive ? auctionHallById(t.exclusive.hall) : null;
+  }
+
+  function hallIndex(hall) {
+    return hall ? AUCTION_HALL_CFG.TIERS.findIndex((t) => t.id === hall.id) : -1;
+  }
+
+  /** Permanent unlock by max-cash-ever (hall threshold); lower-hall crates stay openable higher up. */
+  function hallCrateUnlocked(tid) {
+    if (!isExclusiveCrate(tid)) return true;
+    const hall = hallCrateHall(tid);
+    if (!hall) return false;
+    return unlockedHalls.has(hall.id) || peakCash >= hall.peakCash;
+  }
+
+  function ensureHallCrateDaily() {
+    const k = todayKeyLocal();
+    if (!hallCrateDaily || hallCrateDaily.key !== k) hallCrateDaily = { key: k, counts: {} };
+  }
+
+  function hallCrateDailyMax(tid) {
+    const t = CRATE_TIERS[tid];
+    return (t && t.exclusive && t.exclusive.dailyMax) || 0;
+  }
+
+  function hallCrateUsedToday(tid) {
+    ensureHallCrateDaily();
+    return Math.max(0, hallCrateDaily.counts[tid] | 0);
+  }
+
+  function hallCrateRemaining(tid) {
+    return Math.max(0, hallCrateDailyMax(tid) - hallCrateUsedToday(tid));
+  }
+
+  /** Generic crates: always true. Exclusive: unlocked AND today's cap not reached. */
+  function hallCrateAvailable(tid) {
+    if (!isExclusiveCrate(tid)) return true;
+    return hallCrateUnlocked(tid) && hallCrateRemaining(tid) > 0;
+  }
+
+  function recordHallCrateOpen(tid) {
+    ensureHallCrateDaily();
+    hallCrateDaily.counts[tid] = hallCrateUsedToday(tid) + 1;
+  }
+
+  function shortYen(n) {
+    return n >= 10000 && n % 10000 === 0 ? `¥${n / 10000}万` : formatYen(n);
+  }
+
+  /**
+   * Crate list rows for 厅专属柜: current hall's + next hall's (locked teaser) in the main list;
+   * older halls' crates in a collapsible「更多柜子」(keeps the mobile list short).
+   */
+  function hallCrateLayout() {
+    const cur = hallIndex(activeAuctionHall());
+    const main = [];
+    const more = [];
+    for (const tid of hallCrateIds()) {
+      const hi = hallIndex(hallCrateHall(tid));
+      if (hi < 0) continue;
+      if (hi === cur || hi === cur + 1) main.push(tid);
+      else if (hi < cur) more.push(tid);
+    }
+    return { main, more };
+  }
+
+  let hallCratesEl = null;
+  let hallCratesKey = "";
+
+  function hallCrateButtonHtml(tid) {
+    const t = CRATE_TIERS[tid];
+    const hall = hallCrateHall(tid);
+    const hallShort = hall ? hall.name.replace("拍卖厅", "") : "";
+    return `<button type="button" class="crate-btn hall-crate-btn" data-tier="${tid}" data-hall="${hall ? hall.skinId : ""}" disabled>` +
+      `<span class="crate-icon">${t.icon || "📦"}</span>` +
+      `<span class="crate-name">${t.name}<small class="hall-crate-tag">${hallShort}</small></span>` +
+      `<span class="crate-desc">${t.flavor || ""}</span>` +
+      `<span class="crate-fee" data-fee-label>租金 ${formatYen(t.fee)}</span>` +
+      `</button>`;
+  }
+
+  function ensureHallCratesHost() {
+    if (hallCratesEl && hallCratesEl.isConnected) return hallCratesEl;
+    if (!el.crateTiers || !el.crateTiers.parentNode) return null;
+    hallCratesEl = document.getElementById("hallCrates");
+    if (!hallCratesEl) {
+      hallCratesEl = document.createElement("div");
+      hallCratesEl.id = "hallCrates";
+      hallCratesEl.className = "hall-crates";
+      el.crateTiers.parentNode.insertBefore(hallCratesEl, el.crateTiers.nextSibling);
+      hallCratesEl.addEventListener("click", (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest(".hall-crate-btn") : null;
+        if (!btn || btn.disabled) return;
+        selectCrateTier(btn.dataset.tier);
+      });
+    }
+    hallCratesKey = "";
+    return hallCratesEl;
+  }
+
+  function renderHallCrates() {
+    const host = ensureHallCratesHost();
+    if (!host) return;
+    const { main, more } = hallCrateLayout();
+    const key = main.join(",") + "|" + more.join(",");
+    if (key !== hallCratesKey) {
+      hallCratesKey = key;
+      host.hidden = !main.length && !more.length;
+      host.innerHTML =
+        (main.length ? `<div class="hall-crates-head">厅专属柜<small>每日限次 · 不吃厅加成</small></div>` : "") +
+        `<div class="hall-crates-list">${main.map(hallCrateButtonHtml).join("")}</div>` +
+        (more.length
+          ? `<details class="hall-crates-more"><summary>更多柜子（${more.length}）</summary>` +
+            `<div class="hall-crates-list">${more.map(hallCrateButtonHtml).join("")}</div></details>`
+          : "");
+    }
+    const hasBailout = freeCommonCharges > 0 || freeRentCharges > 0;
+    let hasSelected = false;
+    host.querySelectorAll(".hall-crate-btn").forEach((btn) => {
+      const tid = btn.dataset.tier;
+      const t = CRATE_TIERS[tid];
+      const unlocked = hallCrateUnlocked(tid);
+      const rem = hallCrateRemaining(tid);
+      const max = hallCrateDailyMax(tid);
+      const feeNow = effectiveTierFee(tid);
+      const canAfford = cash >= feeNow;
+      const feeLabel = btn.querySelector("[data-fee-label]");
+      if (feeLabel) {
+        if (!unlocked) {
+          const hall = hallCrateHall(tid);
+          feeLabel.textContent = `🔒 峰值 ${shortYen(hall ? hall.peakCash : 0)} 解锁`;
+        } else {
+          const disc = nextCrateDiscountPct > 0 && feeNow < t.fee;
+          feeLabel.textContent = rem > 0
+            ? `租金 ${formatYen(feeNow)}${disc ? "（折）" : ""} · 今日 ${rem}/${max}`
+            : `今日次数已用完（${max}/${max}）`;
+        }
+      }
+      btn.classList.toggle("locked", !unlocked);
+      btn.classList.toggle("spent", unlocked && rem <= 0);
+      btn.title = !unlocked
+        ? `${t.name}：生涯峰值现金达 ${formatYen((hallCrateHall(tid) || {}).peakCash || 0)}（${(hallCrateHall(tid) || {}).name || ""}）后永久解锁`
+        : `${t.name} · ${t.flavor || ""} · 每日 ${max} 次（今日剩 ${rem}）· 不吃厅金红加成`;
+      btn.disabled = !unlocked || rem <= 0 || crateOpenedThisRound || extractedThisRound ||
+        (bankrupt && !hasBailout) || revealing || !canAfford;
+      const sel = selectedTier === tid;
+      btn.classList.toggle("selected", sel);
+      btn.classList.toggle("unaffordable", unlocked && rem > 0 && !canAfford && !crateOpenedThisRound);
+      if (sel) {
+        hasSelected = true;
+        const det = btn.closest("details");
+        if (det && !det.open) det.open = true; // keep the chosen older crate visible
+      }
+    });
+    host.classList.toggle("has-selected", hasSelected);
+  }
+
+  /** Crate button click (generic + 厅专属柜). */
+  function selectCrateTier(tid) {
+    const tier = CRATE_TIERS[tid];
+    if (!tier) return;
+    selectedTier = tid;
+    updateCrateButtons();
+    updateFeePreview();
+    const rent = effectiveTierFee(tid);
+    const discNote = nextCrateDiscountPct > 0 ? `（含下一柜-${Math.round(nextCrateDiscountPct * 100)}%）` : "";
+    const exclNote = tier.exclusive ? `（${tier.flavor || "厅专属柜"} · 今日剩 ${hallCrateRemaining(tid)} 次）` : "";
+    setActionDesc(
+      `已看中「${tier.name}」，租金 ${formatYen(rent)}${honeymoonActive() && HONEYMOON.FEE_MULT[tid] ? "（新手保护）" : ""}${discNote}${exclNote}。点「支付租金并开箱」向房东付款。`
+    );
+  }
+
   function updateCrateButtons() {
     el.crateTiers.querySelectorAll(".crate-btn").forEach((btn) => {
       const tid = btn.dataset.tier;
@@ -5123,6 +5464,12 @@
     if (selectedTier === "limited" && !limitedOfferActive()) {
       selectedTier = null;
     }
+    // 厅专属柜 selection validity (locked / today's cap used) — only before the open
+    if (selectedTier && !CRATE_TIERS[selectedTier]) selectedTier = null;
+    if (selectedTier && isExclusiveCrate(selectedTier) && !crateOpenedThisRound && !hallCrateAvailable(selectedTier)) {
+      selectedTier = null;
+    }
+    renderHallCrates();
     const tierObj = selectedTier ? CRATE_TIERS[selectedTier] : null;
     const freeKindSel = selectedTier ? freeTokenForTier(selectedTier) : null;
     const hasBailout = freeCommonCharges > 0 || freeRentCharges > 0;
@@ -5134,6 +5481,7 @@
       !(bankrupt && !hasBailout && !freeKindSel) &&
       !revealing &&
       (selectedTier !== "limited" || limitedOfferActive()) &&
+      hallCrateAvailable(selectedTier) &&
       (!!freeKindSel || cash >= effectiveTierFee(selectedTier));
     el.btnOpenCrate.disabled = !canOpen;
     if (el.btnOpenCrate) {
@@ -5182,6 +5530,7 @@
 
   /** Free open tokens: common-only / rare-only / legacy freeRent (any daily tier). */
   function freeTokenForTier(tierId) {
+    if (isExclusiveCrate(tierId)) return null; // 厅专属柜 always pay rent (daily-capped)
     if (tierId === "common" && freeCommonCharges > 0) return "common";
     if (tierId === "rare" && freeRareCharges > 0) return "rare";
     if (tierId && tierId !== "limited" && freeRentCharges > 0) return "rent";
@@ -5214,6 +5563,13 @@
     // selectedTier after this point.
     const tierId = selectedTier;
     const tier = CRATE_TIERS[tierId];
+    if (!tier) { selectedTier = null; updateCrateButtons(); return; }
+    if (tier.exclusive && !hallCrateAvailable(tierId)) {
+      showToast(hallCrateUnlocked(tierId) ? `今日「${tier.name}」次数已用完` : `「${tier.name}」尚未解锁`);
+      selectedTier = null;
+      updateCrateButtons();
+      return;
+    }
     hideUpdateBanner(); // never show the update prompt during an open / reveal
     // Free tokens: common / rare dedicated, or legacy freeRent — never luxury limited
     const freeKind = freeTokenForTier(tierId);
@@ -5247,6 +5603,7 @@
         showToast(`已使用下一柜折扣（-${Math.round(discPctUsed * 100)}%）`);
       }
     }
+    if (tier.exclusive) recordHallCrateOpen(tierId); // per-crate daily count (paid opens only)
 
     // Light key consume on sealed/limited when keys available (flavor / future currency)
     if ((tierId === "sealed" || tierId === "limited") && keys > 0) {
@@ -5263,7 +5620,7 @@
     totalCrateOpens += 1;
     checkOpenMilestones();
 
-    const usedRareBoost = rareBoostCharges > 0;
+    const usedRareBoost = rareBoostCharges > 0 && !tier.exclusive; // 厅专属柜 keep the boost for later
     const loot = rollLoot(tierId);
     // Paid/free open must never be empty — deliver a real 垫底货 up front.
     if (!Array.isArray(loot) || loot.length === 0) {
@@ -5290,16 +5647,17 @@
     const hall = activeAuctionHall();
     const hallId = hall ? hall.id : null;
     const audio = FX();
+    const fxTier = crateBaseTier(tierId, "fxTier"); // 厅专属柜 reuse a generic ceremony / SFX profile
     const timing = (audio && typeof audio.getCrateOpenTiming === "function")
-      ? audio.getCrateOpenTiming(tierId)
-      : { totalMs: tierId === "common" ? 800 : tierId === "rare" ? 1200 : tierId === "limited" ? 2500 : 2200, phases: [] };
+      ? audio.getCrateOpenTiming(fxTier)
+      : { totalMs: fxTier === "common" ? 800 : fxTier === "rare" ? 1200 : fxTier === "limited" ? 2500 : 2200, phases: [] };
 
     // ---- Skippable industrial open ceremony (locked timings) ----
     el.scanOverlay.hidden = false;
     el.scanOverlay.classList.add("skip-ready");
     if (el.scanBox) {
       el.scanBox.classList.remove("tier-common", "tier-rare", "tier-sealed", "tier-limited");
-      el.scanBox.classList.add("tier-" + (tierId || "rare"));
+      el.scanBox.classList.add("tier-" + (fxTier || "rare"));
     }
     el.scanTitle.textContent = `正在撬开「${tier.name}」…（${feeLabel}）`;
     if (el.scanProgress) el.scanProgress.textContent = (timing.phases[0] && timing.phases[0].cue) || "撬锁…";
@@ -5309,7 +5667,7 @@
     fx("resume");
     let openHandle = null;
     if (audio && typeof audio.playCrateOpen === "function") {
-      try { openHandle = audio.playCrateOpen(tierId, hallId); } catch (_) { openHandle = null; }
+      try { openHandle = audio.playCrateOpen(fxTier, hallId); } catch (_) { openHandle = null; }
     }
 
     const phaseTimers = [];
@@ -5349,7 +5707,7 @@
       // Quick lid sting so skip still feels like an open
       try {
         if (audio && typeof audio.playOpenPhaseSfx === "function") {
-          audio.playOpenPhaseSfx("lid", tierId, hallId);
+          audio.playOpenPhaseSfx("lid", fxTier, hallId);
         }
       } catch (_) { /* ignore */ }
       finishOpen();
@@ -5521,8 +5879,10 @@
       try { fx("lootRevealEnd"); } catch (_) {}
       const totalV = loot.reduce((s, e) => s + (getDef(e.defId) ? itemValue(e) : 0), 0);
       const feeTxt = feePaid > 0 ? `-${formatYen(feePaid)}` : "免费";
+      const b1 = tier && tier.rolls > 1 ? loot.filter((e) => e._batch === 1).length : 0;
+      const batchTxt = tier && tier.rolls > 1 ? `（双联：${b1} + ${loot.length - b1} 件，共用仓库）` : "";
       addLog(
-        `第 ${round} 场租下<strong>${tier.name}</strong>（${feeTxt}），开出 ${loot.length} 件 · 货值约 ${formatYen(totalV)}`
+        `第 ${round} 场租下<strong>${tier.name}</strong>（${feeTxt}），开出 ${loot.length} 件${batchTxt} · 货值约 ${formatYen(totalV)}`
       );
       const warehouseCells = gridSize * gridSize;
       const occupiedCells = usedCells();
@@ -6577,6 +6937,7 @@
     // keep limitedDailyCount/key across restart within same day? Clear on new save feel
     limitedDailyCount = 0;
     limitedDailyKey = todayKeyLocal();
+    hallCrateDaily = { key: todayKeyLocal(), counts: {} };
     if (limitedTickTimer) { clearInterval(limitedTickTimer); limitedTickTimer = null; }
     if (el.challengeModal) el.challengeModal.hidden = true;
     challengeActive = null;
@@ -6837,6 +7198,7 @@
       limitedDailyCount,
       limitedDailyKey: limitedDailyKey || todayKeyLocal(),
       limitedCooldownUntil,
+      hallCrateDaily: { key: hallCrateDaily.key || todayKeyLocal(), counts: Object.assign({}, hallCrateDaily.counts) },
       staging: staging.map((e) => ({
         uid: e.uid,
         defId: e.defId,
@@ -7050,6 +7412,19 @@
       limitedOffer = null;
     }
     if (selectedTier === "limited" && !limitedOfferActive()) selectedTier = null;
+    if (selectedTier && !CRATE_TIERS[selectedTier]) selectedTier = null;
+    {
+      // 厅专属柜 daily counts (older saves: none → fresh day)
+      const hd = data.hallCrateDaily;
+      hallCrateDaily = { key: hd && typeof hd.key === "string" ? hd.key : todayKeyLocal(), counts: {} };
+      if (hd && hd.counts && typeof hd.counts === "object") {
+        for (const tid of hallCrateIds()) {
+          const c = Math.floor(Number(hd.counts[tid]) || 0);
+          if (c > 0) hallCrateDaily.counts[tid] = c;
+        }
+      }
+      ensureHallCrateDaily(); // reset if the day rolled
+    }
 
     let gs = Number(data.gridSize) || DEFAULT_GRID;
     if (!GRID_SIZES.includes(gs)) {
@@ -7121,15 +7496,7 @@
     el.crateTiers.querySelectorAll(".crate-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (btn.disabled) return;
-        selectedTier = btn.dataset.tier;
-        updateCrateButtons();
-        updateFeePreview();
-        const tier = CRATE_TIERS[selectedTier];
-        const rent = effectiveTierFee(selectedTier);
-        const discNote = nextCrateDiscountPct > 0 ? `（含下一柜-${Math.round(nextCrateDiscountPct * 100)}%）` : "";
-        setActionDesc(
-          `已看中「${tier.name}」，租金 ${formatYen(rent)}${honeymoonActive() && HONEYMOON.FEE_MULT[selectedTier] ? "（新手保护）" : ""}${discNote}。点「支付租金并开箱」向房东付款。`
-        );
+        selectCrateTier(btn.dataset.tier);
       });
     });
 
@@ -7596,6 +7963,7 @@
   bind();
   try { loadSettleFxMode(); } catch (e) { console.warn("[boot] loadSettleFxMode", e); }
   try { applyEvalUrlFlags(); setEvalMode(evalModeOn()); } catch (e) { console.warn("[boot] setEvalMode", e); }
+  try { mountEvalDailyReset(); } catch (e) { console.warn("[boot] evalDailyReset", e); }
   try { syncFxModeUI(); } catch (e) { console.warn("[boot] syncFxModeUI", e); }
   try { syncMuteUI(); } catch (e) { console.warn("[boot] syncMuteUI", e); }
   try { loadDailyBest(); updateDailyBestUI(); } catch (e) { console.warn("[boot] dailyBest", e); }

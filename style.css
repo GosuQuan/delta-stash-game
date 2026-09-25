@@ -833,6 +833,52 @@ kbd {
 }
 .crate-btn.unaffordable .crate-fee { color: var(--red); }
 
+/* ----- 厅专属柜 (hall-exclusive crates, rendered by game.js into #hallCrates) ----- */
+.hall-crates { display: flex; flex-direction: column; gap: 6px; }
+.hall-crates[hidden] { display: none !important; }
+.hall-crates-head {
+  display: flex; align-items: baseline; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--amber-bright);
+  border-top: 1px dashed var(--border); padding-top: 6px;
+}
+.hall-crates-head small { font-weight: 400; letter-spacing: 0; color: var(--text-dim); font-size: 10px; }
+.hall-crates-list { display: flex; flex-direction: column; gap: 6px; }
+.hall-crates-list:empty { display: none; }
+.hall-crate-btn .crate-name { display: flex; align-items: baseline; gap: 5px; }
+.hall-crate-tag {
+  font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 3px;
+  border: 1px solid var(--border-bright); color: var(--text-dim);
+}
+.hall-crate-btn[data-hall="bronze"] .hall-crate-tag { color: #d09a6a; border-color: rgba(208,154,106,0.5); }
+.hall-crate-btn[data-hall="jade"] .hall-crate-tag { color: #5fd3a8; border-color: rgba(95,211,168,0.5); }
+.hall-crate-btn[data-hall="silver"] .hall-crate-tag { color: #cfd8e3; border-color: rgba(207,216,227,0.5); }
+.hall-crate-btn.selected { border-color: var(--amber); box-shadow: 0 0 0 1px rgba(212,160,23,0.3); }
+.hall-crate-btn.locked { opacity: 0.55; filter: grayscale(0.6); border-style: dashed; }
+.hall-crate-btn.locked .crate-fee, .hall-crate-btn.spent .crate-fee { color: var(--text-dim); }
+.hall-crates-more > summary {
+  cursor: pointer; font-size: 11px; color: var(--text-dim); padding: 4px 2px; list-style: none;
+}
+.hall-crates-more > summary::-webkit-details-marker { display: none; }
+.hall-crates-more > summary::before { content: "▸ "; }
+.hall-crates-more[open] > summary::before { content: "▾ "; }
+.hall-crates-more > .hall-crates-list { margin-top: 4px; }
+/* Packing: only the crate actually opened stays visible (as its own chip) */
+body.packing .hall-crates:not(.has-selected) { display: none !important; }
+body.packing .hall-crates .hall-crate-btn:not(.selected),
+body.packing .hall-crates-head,
+body.packing .hall-crates-more > summary { display: none !important; }
+@media (max-width: 700px) {
+  .hall-crates { gap: 3px; }
+  .hall-crates-head { font-size: 9px; padding-top: 3px; }
+  .hall-crates-head small { display: none; }
+  .hall-crates-list { flex-direction: row; gap: 3px; }
+  .hall-crates-list .crate-btn { flex: 1 1 0; min-width: 0; }
+  .hall-crate-btn .crate-name { justify-content: center; gap: 3px; }
+  .hall-crate-tag { font-size: 8px; padding: 0 2px; }
+  .hall-crates-more > summary { font-size: 10px; padding: 2px; }
+  body.packing .hall-crates { display: none !important; }
+}
+
 
 /* ----- Mute / 音效 toggle ----- */
 .mute-btn {
