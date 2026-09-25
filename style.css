@@ -2633,6 +2633,15 @@ html.drag-scroll-lock {
 .settle-replay-overlay.show {
   animation: settleReplayFade 0.72s ease both;
 }
+/* Tap-to-skip: overlay must receive taps while visible, and [hidden] must win over display:flex */
+.settle-replay-overlay:not([hidden]) { pointer-events: auto; }
+.settle-replay-overlay[hidden] { display: none !important; }
+.settle-replay-skip {
+  margin: 14px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 248, 230, 0.45);
+}
 .settle-replay-card {
   text-align: center;
   padding: 28px 36px 32px;

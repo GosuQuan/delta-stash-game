@@ -3670,6 +3670,7 @@
       '<div class="settle-replay-name" id="settleReplayName"></div>' +
       '<div class="settle-replay-meta" id="settleReplayMeta"></div>' +
       '<div class="settle-replay-val" id="settleReplayVal"></div>' +
+      '<p class="settle-replay-skip">点击任意处跳过</p>' +
       "</div>";
     document.body.appendChild(host);
     return host;
@@ -3677,7 +3678,10 @@
 
   /**
    * Short highlight of the round's most valuable sold item, then callback
-   * (P/L SFX + result modal). Duration: ~720ms (low-fx ~420ms); tap to skip.
+   * (P/L SFX + result modal). Duration: ~980ms (low-fx ~420ms).
+   * Skip: pointerdown anywhere (window capture — overlay, toasts, HUD) or Esc/Space/Enter
+   * finishes immediately. Cash was already applied in extract(); `done` runs exactly once
+   * via finishOnce, so skipping never double-applies money or restarts the number tick.
    * Reduced-motion / empty loot → immediate callback.
    */
   function playSettleReplay(entry, done) {
@@ -3713,12 +3717,12 @@
     }
     if (val) val.textContent = formatYen(itemValue(entry));
 
+    // Drop listeners left over from a previous (overlapping) replay
+    if (typeof host._unbindSkip === "function") host._unbindSkip();
+
     const teardown = () => {
       clearTimeout(host._t);
-      if (host._skipBound) {
-        host.removeEventListener("pointerdown", host._skipBound);
-        host._skipBound = null;
-      }
+      if (typeof host._unbindSkip === "function") host._unbindSkip();
       host.classList.remove("show");
       host.hidden = true;
       document.body.classList.remove("settle-replay-open");
@@ -3739,11 +3743,30 @@
       fx("settleClick");
     });
 
-    host._skipBound = (ev) => {
-      ev.preventDefault();
+    // Was: listener on the overlay only, but the overlay is `pointer-events: none` in CSS,
+    // so taps fell through (e.g. only dismissed a toast). Listen on window in capture phase
+    // and swallow the event so the tap/Esc doesn't also hit the UI underneath (Esc would
+    // otherwise close the result modal via the global keydown handler).
+    const onSkipPointer = (ev) => {
+      if (ev.cancelable) ev.preventDefault();
+      ev.stopPropagation();
       teardown();
     };
-    host.addEventListener("pointerdown", host._skipBound);
+    const onSkipKey = (ev) => {
+      const k = ev.key;
+      if (k !== "Escape" && k !== " " && k !== "Spacebar" && k !== "Enter") return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (ev.repeat) return;
+      teardown();
+    };
+    window.addEventListener("pointerdown", onSkipPointer, true);
+    window.addEventListener("keydown", onSkipKey, true);
+    host._unbindSkip = () => {
+      window.removeEventListener("pointerdown", onSkipPointer, true);
+      window.removeEventListener("keydown", onSkipKey, true);
+      host._unbindSkip = null;
+    };
     clearTimeout(host._t);
     host._t = setTimeout(teardown, ms);
   }
