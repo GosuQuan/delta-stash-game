@@ -28,8 +28,9 @@
   const WEALTH_GOLD_PEAK = 250000;
   const BIG_GAIN_ABS = 8000; // coin-burst / jackpot display threshold (¥)
 
-  // Economy: daily tiers slightly negative / break-even (hungry); packing loss included.
-  // Perfect-pack EV ≈ 0.85–1.05; typical 5×5 packs feel slight loss; big wins rarer.
+  // Economy (econ-retune, 游戏商业化 targets; value ÷ rent, packing loss + 70% 鉴宝 included, post-honeymoon):
+  // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
+  // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -40,41 +41,41 @@
       id: "common", name: "普通柜", fee: 4500, count: [5, 7],
       valueScale: 1.12,
       allowed: ["white", "green", "blue", "purple", "pink"],
-      // CUT: no gold/red — white/green/blue dominant, rare purple/pink
+      // CUT: no gold/red. Recovery crate: green/blue dominant, little junk, purple/pink trimmed (low variance)
       mult: {
         dahong: 0, xiaohong: 0, yanjin: 0, dajin: 0, xiaojin: 0,
-        pink: 0.55, purple: 0.75, blue: 1.85, green: 1.45, white: 1.5,
+        pink: 0.08, purple: 0.2, blue: 2.3, green: 2.4, white: 0.4,
       },
     },
     rare: {
       id: "rare", name: "精选柜", fee: 13800, count: [5, 7],
       valueScale: 1.06,
       allowed: ["white", "green", "blue", "purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong"],
-      // more blue/purple/pink; occasional 小金/大金/炎金; tiny 小红; no 大红
+      // blue/purple/pink core; gold/red trimmed, white/green backfill; tiny 小红; no 大红
       mult: {
-        dahong: 0, xiaohong: 0.08, yanjin: 0.22, dajin: 0.42, xiaojin: 1.1,
-        pink: 1.55, purple: 1.75, blue: 1.45, green: 0.55, white: 0.35,
+        dahong: 0, xiaohong: 0.06, yanjin: 0.16, dajin: 0.32, xiaojin: 0.9,
+        pink: 1.35, purple: 1.6, blue: 1.45, green: 0.9, white: 0.7,
       },
     },
     sealed: {
       id: "sealed", name: "密封柜", fee: 30000, count: [5, 8],
       valueScale: 1.08,
-      allowed: ["blue", "purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong", "dahong"],
-      // gold/red ≈28–30% combined; still can lose badly on 5×5
+      allowed: ["green", "blue", "purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong", "dahong"],
+      // gold/red ≈11% of rolls (was ≈26%); green/blue backfill → usually a loss, big hits recoup
       mult: {
-        dahong: 0.8, xiaohong: 0.9, yanjin: 1.05, dajin: 1.1, xiaojin: 1.0,
-        pink: 1.25, purple: 1.2, blue: 0.45, green: 0, white: 0,
+        dahong: 0.55, xiaohong: 0.6, yanjin: 0.7, dajin: 0.8, xiaojin: 0.8,
+        pink: 1.0, purple: 1.3, blue: 1.2, green: 0.6, white: 0,
       },
     },
-    // Limited-time luxury desire sink (~¥60k). Better pool; rent eats most profit.
+    // Limited-time luxury desire sink (~¥60k). Mostly blue/purple filler; 大红 share kept ≈ same (jackpot crate).
     limited: {
       id: "limited", name: "限时豪华柜", fee: 60000, count: [6, 9],
       valueScale: 1.12,
       limited: true,
-      allowed: ["pink", "xiaojin", "dajin", "yanjin", "xiaohong", "dahong"],
+      allowed: ["blue", "purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong", "dahong"],
       mult: {
-        dahong: 0.95, xiaohong: 1.05, yanjin: 1.15, dajin: 1.2, xiaojin: 1.15,
-        pink: 1.1, purple: 0, blue: 0, green: 0, white: 0,
+        dahong: 3.0, xiaohong: 1.3, yanjin: 0.65, dajin: 0.55, xiaojin: 0.55,
+        pink: 0.85, purple: 1.7, blue: 1.4, green: 0, white: 0,
       },
     },
   };
@@ -191,7 +192,8 @@
    * 「高级拍卖厅」— cash-milestone easter-egg halls (游戏商业化).
    * Unlock by career peak cash (survives dips). Highest unlocked is active.
    * Mid-game lock (~¥30万): 白银 ¥180k / 铂金 ¥280k between 翡翠 and 赤金;
-   * 赤金 raised to ¥400k. Early halls stay modest; silver/platinum gold-red uplift is held to +4%, crimson caps at +8%; rent remains stepped without runaway EV.
+   * 赤金 raised to ¥400k. econ-retune: no rent markup (rentMarkupPct 0); gold/red uplift +3% (bronze) / +4% (jade→crimson)
+   * so each hall's value/rent ratio sits 0 to +3pp above no-hall (common unaffected: no gold/red in its pool).
    * Documented: ¥40k / ¥80k / ¥180k / ¥280k / ¥400k.
    * Chinese flavor toast on unlock; persist unlocked ids + peakCash.
    */
@@ -206,9 +208,9 @@
         peakCash: 40000,
         skinId: "bronze", // future hall-skins IAP identity
         valueRange: "约 ¥800 – ¥4万",
-        toast: "隐藏通道开启：「青铜拍卖厅」——金红权重 +3%，租金 +5%。",
+        toast: "隐藏通道开启：「青铜拍卖厅」——金红权重 +3%，租金不加价。",
         goldRedBoostPct: 0.03,
-        rentMarkupPct: 0.05,
+        rentMarkupPct: 0,
         weightMult: { xiaojin: 1.03, dajin: 1.03, yanjin: 1.03, xiaohong: 1.03, dahong: 1.03 },
       },
       {
@@ -217,10 +219,10 @@
         peakCash: 80000,
         skinId: "jade",
         valueRange: "约 ¥2千 – ¥9万",
-        toast: "「翡翠拍卖厅」揭幕：金红权重 +5%，租金 +8%，亏本仍可能。",
-        goldRedBoostPct: 0.05,
-        rentMarkupPct: 0.08,
-        weightMult: { xiaojin: 1.05, dajin: 1.05, yanjin: 1.05, xiaohong: 1.05, dahong: 1.05 },
+        toast: "「翡翠拍卖厅」揭幕：金红权重 +4%，租金不加价，亏本仍可能。",
+        goldRedBoostPct: 0.04, // econ-retune: 5%→4% (keeps limited ≤ +3pp over no-hall)
+        rentMarkupPct: 0,
+        weightMult: { xiaojin: 1.04, dajin: 1.04, yanjin: 1.04, xiaohong: 1.04, dahong: 1.04 },
       },
       {
         id: "silver_hall",
@@ -228,9 +230,9 @@
         peakCash: 180000,
         skinId: "silver",
         valueRange: "约 ¥4千 – ¥14万",
-        toast: "「白银拍卖厅」入驻中场：金红权重 +4%，租金 +10%，~30万主场开启。",
+        toast: "「白银拍卖厅」入驻中场：金红权重 +4%，租金不加价，~30万主场开启。",
         goldRedBoostPct: 0.04, // lean mid-hall uplift
-        rentMarkupPct: 0.10,
+        rentMarkupPct: 0,
         weightMult: { xiaojin: 1.04, dajin: 1.04, yanjin: 1.04, xiaohong: 1.04, dahong: 1.04 },
       },
       {
@@ -239,9 +241,9 @@
         peakCash: 280000,
         skinId: "platinum",
         valueRange: "约 ¥6千 – ¥22万",
-        toast: "「铂金拍卖厅」点亮：金红权重 +4%，租金 +13%，主场密度稳步提升。",
+        toast: "「铂金拍卖厅」点亮：金红权重 +4%，租金不加价，主场密度稳步提升。",
         goldRedBoostPct: 0.04, // lean mid-hall uplift
-        rentMarkupPct: 0.13,
+        rentMarkupPct: 0,
         weightMult: { xiaojin: 1.04, dajin: 1.04, yanjin: 1.04, xiaohong: 1.04, dahong: 1.04 },
       },
       {
@@ -250,10 +252,10 @@
         peakCash: 400000,
         skinId: "crimson",
         valueRange: "约 ¥8千 – ¥35万",
-        toast: "传闻中的「赤金拍卖厅」——金红权重 +8%，租金 +16%，远非稳赚。",
-        goldRedBoostPct: 0.08, // capped late-hall uplift
-        rentMarkupPct: 0.16,
-        weightMult: { xiaojin: 1.08, dajin: 1.08, yanjin: 1.08, xiaohong: 1.08, dahong: 1.08 },
+        toast: "传闻中的「赤金拍卖厅」——金红权重 +4%，租金不加价，远非稳赚。",
+        goldRedBoostPct: 0.04, // econ-retune: 8%→4% so hall ratio stays 0~+3pp over no-hall
+        rentMarkupPct: 0,
+        weightMult: { xiaojin: 1.04, dajin: 1.04, yanjin: 1.04, xiaohong: 1.04, dahong: 1.04 },
       },
     ],
   };
@@ -388,6 +390,9 @@
         white: 0.55, green: 0.65, blue: 1.05, purple: 1.45, pink: 1.5,
         xiaojin: 1.75, dajin: 1.45, yanjin: 1.15, xiaohong: 1.2,
       },
+      // 大红 is blocked in honeymoon; lift gold/小红 so sealed/limited stay ≥1.10 (econ-retune)
+      sealed: { xiaojin: 1.3, dajin: 1.4, yanjin: 1.5, xiaohong: 1.6 },
+      limited: { xiaojin: 1.6, dajin: 2.0, yanjin: 2.5, xiaohong: 3.5 },
     },
     JITTER: {
       common: [0.95, 1.18],
@@ -1885,7 +1890,7 @@
     return (
       `<li>成交货值区间：<strong>${hall.valueRange || "—"}</strong></li>` +
       `<li>金红掉率提升：<strong>+${gr}%</strong></li>` +
-      `<li>租金上浮：<strong>+${rent}%</strong></li>`
+      `<li>租金上浮：<strong>${rent > 0 ? `+${rent}%` : "不加价"}</strong></li>`
     );
   }
 
@@ -1934,7 +1939,7 @@
         el.hallChip.classList.remove(...HALL_SKIN_CHIP);
         if (hall.skinId) el.hallChip.classList.add("skin-" + hall.skinId);
         el.hallChip.title =
-          `点击查看 · ${hall.name}（峰值 ${formatYen(peakCash)}）· 金红 +${Math.round(hall.goldRedBoostPct * 100)}% · 租金 +${Math.round(hall.rentMarkupPct * 100)}% · 货值 ${hall.valueRange || ""}`;
+          `点击查看 · ${hall.name}（峰值 ${formatYen(peakCash)}）· 金红 +${Math.round(hall.goldRedBoostPct * 100)}%${hall.rentMarkupPct > 0 ? ` · 租金 +${Math.round(hall.rentMarkupPct * 100)}%` : ""} · 货值 ${hall.valueRange || ""}`;
       } else {
         el.hallChip.hidden = true;
       }
@@ -1955,7 +1960,7 @@
     if (el.hallLine) {
       const bits = AUCTION_HALL_CFG.TIERS.map((t) => {
         const on = unlockedHalls.has(t.id);
-        return `<span class="hall-chip${on ? " on" : ""}">${on ? "✓ " : ""}${t.name}<small>${formatYen(t.peakCash)} · 金红 +${Math.round(t.goldRedBoostPct * 100)}% · 租金 +${Math.round(t.rentMarkupPct * 100)}% · ${t.valueRange || ""}</small></span>`;
+        return `<span class="hall-chip${on ? " on" : ""}">${on ? "✓ " : ""}${t.name}<small>${formatYen(t.peakCash)} · 金红 +${Math.round(t.goldRedBoostPct * 100)}%${t.rentMarkupPct > 0 ? ` · 租金 +${Math.round(t.rentMarkupPct * 100)}%` : ""} · ${t.valueRange || ""}</small></span>`;
       });
       el.hallLine.innerHTML =
         `<span class="hall-label">高级拍卖厅 · 峰值 <strong>${formatYen(peakCash)}</strong></span>` +
