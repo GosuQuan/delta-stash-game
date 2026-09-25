@@ -3059,6 +3059,8 @@
   /** Desktop layout (≥961px): the grid is the centre stage and is fitted to .grid-wrap (width AND height). */
   const CELL_MIN = 24;
   const CELL_MAX = 64; // layout f/g: 5×5 ≈ 322px on every layout (e used 120 on desktop → oversized)
+  const CELL_MAX_MOBILE = 56; // 5×5 stays thumb-friendly without dominating a phone screen
+
   function isDesktopLayout() {
     return !!(window.matchMedia && window.matchMedia("(min-width: 961px)").matches);
   }
@@ -3145,7 +3147,8 @@
     }
     if (availW <= 0 || availH <= 0) return; // not laid out yet (hidden / jsdom)
     const raw = Math.floor(Math.min(availW, availH) / gridSize);
-    setCellSizePx(Math.max(CELL_MIN, Math.min(CELL_MAX, raw)));
+    const cap = mobile ? CELL_MAX_MOBILE : CELL_MAX;
+    setCellSizePx(Math.max(CELL_MIN, Math.min(cap, raw)));
   }
 
   // ----- Grid -----
@@ -5861,7 +5864,8 @@
   // ghost floats TOUCH_LIFT_GAP px above the touch point, the target cell comes from the ghost's top-left
   // cell (what you see is where it lands), and the exact landing footprint is drawn as a strong
   // green/red overlay on top of the grid. Mouse drags are untouched (ghost snaps under the cursor).
-  const TOUCH_LIFT_GAP = 28;
+  const TOUCH_LIFT_GAP = 14;
+  const TOUCH_TARGET_LIFT = 12;
   let _touchFootprintEl = null;
   let _touchFingerEl = null;
 
@@ -5884,18 +5888,13 @@
     return { gx, gy, gw, gh, cw, ch };
   }
 
-  /** Grid cell whose area contains the centre of the ghost's top-left cell (touch lift). */
-  function cellFromGhostOrigin(gx, gy, cw, ch) {
-    return cellFromPoint(gx + cw / 2, gy + ch / 2);
-  }
-
-  /** Drag target for a pointer position: raw point for mouse, lifted-ghost origin for touch/pen. */
+  /** Drag target for a pointer position: raw point for mouse, just-above-finger point for touch/pen. */
   function dragSnapAt(x, y) {
     const entry = currentDragEntry();
     if (!drag.touch || !entry) return cellFromPoint(x, y);
-    const g = touchLiftGeom(entry.defId, drag.rot, x, y);
-    drag.ghostPt = { x: g.gx + g.gw / 2, y: g.gy + g.gh / 2 };
-    return cellFromGhostOrigin(g.gx, g.gy, g.cw, g.ch);
+    // A large item must not push its landing cells a whole item's height above the finger.
+    drag.ghostPt = { x, y: y - TOUCH_TARGET_LIFT };
+    return cellFromPoint(drag.ghostPt.x, drag.ghostPt.y);
   }
 
   function renderTouchFootprint(cells, ok) {
