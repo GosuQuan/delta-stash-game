@@ -256,12 +256,17 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-25 13:26 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-09-25 13:39 Asia/Shanghai · 负责人：游戏grok
 
 ### 本轮已交付
-- **无新 `game.js` 改动**（`main` tip 仍为 `aee6a72` 缓存戳；其后仅 docs：`0b4400e` / `3564a51` / `e818ba2`）。
-- **空柜保底已在线上代码**：付费开箱强制暂存 ≥1 件（`game.js` `rollLoot` 尾部注释「Paid open must never yield empty staging」）；⑪ 决策里「空柜 bug 先单独上线」与现网一致，无需再发补丁。
-- **既有交付仍有效**：`?v=20260925a` 缓存戳、`bc4f5b8` 空间紧张（≥0.6）、Pages https://gosuquan.github.io/delta-stash-game/ 、门户 `platform.js`、精选 `fee=13800` / 蜜月 UI ¥11,050、开箱灰保护、PC 可滚、窄屏 staging、评测 sheet、蜜月 5 场/¥45k、跟随球鉴宝。
+- **热修：限时柜空柜 / 垫底货未补发**（`6d25bf1`，线上 `?v=20260925b`，Pages 已 built）。
+  - **现象**：白银厅开限时豪华柜扣 ¥66,000、0 件；提示「已补发一件垫底货」但暂存始终为空；结算 0 件 0 格（`docs/playtest-shots/line4-tiers/05-worst.png`）。
+  - **根因**：`openCrate()` 先 `limitedOffer = null`（消耗限时柜），再 `checkOpenMilestones()`，最后才 `rollLoot(selectedTier)`。只要这一开恰好踩中开箱里程碑（5/10/20/35/75 次…；测试员是**第 10 开** → 普通柜券），奖励里的 `updateStats()` → `updateCrateButtons()` 发现「选中限时但无在售限时柜」就把 `selectedTier` 置 `null` → `rollLoot(null)` 返回 `[]`。租金已扣；`runSequentialReveal` 的「垫底货」分支**只弹 toast，没往暂存里放东西**。离线 sim 只直调 `rollLoot`，所以测不到。（旧的 `rollLoot` 尾部保底只在 tier 有效时生效，前面的「空柜保底已在线上」判断不成立。）
+  - **修复**：`openCrate` 开头快照 `tierId`，之后不再读 `selectedTier`；新增 `makeFallbackLootEntry(tierId)`（该柜最低允许品级、最小 1 格、货值×valueScale）——空 roll、缺 def（原来 `continue` 直接丢）、揭示结束仍 0 件时都**真的放进暂存**，可装箱、计入结算；`pendingRevealLoot` + `itemsDeliveredThisRound` + `revealGen`：强制结算时把未揭示的货先落暂存，旧揭示循环停止，揭示中刷新页面从存档恢复已付货物。**兜底**：付费开箱结算时若一件都没交付过 → **全额退租**（不计胜负/连败），toast + 账本记录。`.pnl-row[hidden]` 修结算弹窗残留「完美装箱奖励 / 下一柜折扣 -12%」空行（截图里那行是上一场残留）。**未改任何经济数值**。
+  - **验证**：jsdom 整份 `game.js` 端到端（`openCrate → reveal → 装箱 → extract`）：4 柜 × (无厅+5 厅) × 蜜月开/关 × 60 开 = 2,880 开 + 鉴宝题开启 1,200 开，每开 ≥1 件、0 退租触发；旧代码同 harness 复现 24/576 空柜（全部是限时柜踩里程碑）。边界 51 项全过（第 10 开白银限时复现、空 loot / 缺 def 补发且可装箱、空结算退租、揭示中强制结算、揭示中刷新恢复）。
+  - **给 `econ-retune`**：改动全在 `openCrate` / `runSequentialReveal` / `extract` / 存读档 / `nextRound` 等流程函数，未碰 `CRATE_TIERS` / `AUCTION_HALL_CFG` / 权重表，rebase 应无冲突。
+- **华丽结算回放可跳过**（`13942c8`）：原来只在遮罩上监听 pointerdown，但遮罩 CSS 是 `pointer-events:none`，点击穿透（只关掉 toast）。现改为 window 捕获阶段监听 **点击任意处 / Esc / 空格 / 回车** 立即结束回放 → 直接出结算弹窗并可「继续下一场」；回放卡片显示「点击任意处跳过」；事件被吞掉，Esc 不会顺带关掉结算弹窗。现金在 `extract()` 已入账、`done` 只执行一次，跳过不重复加钱。「流畅」仍是默认。
+- **既有交付仍有效**：缓存戳（现 `?v=20260925b`）、`bc4f5b8` 空间紧张（≥0.6）、Pages https://gosuquan.github.io/delta-stash-game/ 、门户 `platform.js`、精选 `fee=13800` / 蜜月 UI ¥11,050、开箱灰保护、PC 可滚、窄屏 staging、评测 sheet、蜜月 5 场/¥45k、跟随球鉴宝。
 - **数值核对（以 `game.js` 为准）**：启动 ¥15,000；柜租 4500 / **13800** / 30000 / 60000；蜜月 ROUNDS=5 · CASH_END=45000；厅峰 4万/8万/**18万/28万/40万**；物品表 **129**；`JACKPOT_CHANCE=0.12`；重整 ¥5,850；`ORGANIZE_DAILY_FREE_QUOTA=1`；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`（Pages 免广告）。
 
 ### 进行中
@@ -276,7 +281,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 ### 测试请验
 1. 柜差体感（普通 → 精选 → 密封 → 限时）：仓库已有 `docs/playtest-shots/line4-tiers/` 截图，请把结论写进 ⑫（⑪ 密封仍标「太赚」）。
 2. 华丽 vs 流畅结算：已有 `docs/playtest-shots/line5-fx/`，请对照写进 ⑫ / ⑪「华丽结算对比」。
-3. Pages 普通刷新是否已吃到 `?v=20260925a`（空间紧张规则与强刷一致）。
+3. Pages 普通刷新是否已吃到 `?v=20260925b`；限时柜在第 5/10/20/35 开时应正常出 6–9 件；华丽模式结算回放点任意处可跳过。
 
 
 ## ⑪ 商业化验收日志（每 ~25 分钟刷新）
