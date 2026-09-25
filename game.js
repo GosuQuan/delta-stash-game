@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260925e";
+  const BUILD_VERSION = "20260925f";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -3018,7 +3018,7 @@
 
   /** Desktop layout (≥961px): the grid is the centre stage and is fitted to .grid-wrap (width AND height). */
   const DESKTOP_CELL_MIN = 24;
-  const DESKTOP_CELL_MAX = 120;
+  const DESKTOP_CELL_MAX = 64; // layout f: 5×5 ≈ 320px (e used 120 → felt oversized)
   function isDesktopLayout() {
     return !!(window.matchMedia && window.matchMedia("(min-width: 961px)").matches);
   }
@@ -3027,11 +3027,14 @@
   }
 
   /**
-   * Fit --cell-size so the full N×N warehouse fits in .grid-wrap with no clipped cells / scrollbars.
-   * Mobile (≤700px): width only. Desktop (≥961px): min(width, height) — .grid-wrap is flex:1 with
-   * min-height:0, so its box comes from the layout, not from the grid (no feedback loop).
-   * Tablet 701–960px keeps the fixed per-size cells. Hit-testing / drag ghost read cell rects from
-   * the DOM (cellFromPoint / measuredCellSize) and ghost cells use the same var, so they stay aligned.
+   * Fit --cell-size so the full N×N warehouse fits with no clipped cells / scrollbars.
+   * Mobile (≤700px): width of .grid-wrap only. Tablet 701–960px keeps the fixed per-size cells.
+   * Desktop (≥961px, layout f): the centre panel shrinks to its content, so the budget is NOT the
+   * wrap's own height (that would feed back). Width = .grid-wrap width (column-sized, content-free);
+   * height = from the wrap's top to the bottom of .main-layout / the viewport (whichever is higher up),
+   * minus panel padding and the tips line. Capped at DESKTOP_CELL_MAX (5×5 ≈ 320px), floored at MIN.
+   * Hit-testing / drag ghost read cell rects from the DOM (cellFromPoint / measuredCellSize) and ghost
+   * cells use the same var, so they stay aligned at any size.
    */
   function fitCellSizeToWrap() {
     const mobile = window.matchMedia("(max-width: 700px)").matches;
@@ -3045,13 +3048,17 @@
     if (desktop) {
       const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
       const availW = wrap.clientWidth - padX - 2; // 2 = grid border
-      let availH = wrap.clientHeight - padY - 2;
-      // Short viewports: side columns may push the page taller than the screen — keep the grid on-screen.
-      const top = wrap.getBoundingClientRect().top + (window.scrollY || 0);
+      const wrapTop = wrap.getBoundingClientRect().top;
+      const main = wrap.closest(".main-layout");
       const panel = wrap.closest(".panel");
-      const panelPadB = panel ? parseFloat(getComputedStyle(panel).paddingBottom) || 0 : 0;
-      const viewH = window.innerHeight - top - padY - panelPadB - 14;
-      if (viewH > 0) availH = Math.min(availH, viewH);
+      const pcs = panel ? getComputedStyle(panel) : null;
+      const panelPadB = pcs ? (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0) : 0;
+      const panelGap = pcs ? parseFloat(pcs.rowGap) || 0 : 0;
+      const tips = panel ? panel.querySelector(".grid-tips") : null;
+      const tipsH = tips && tips.offsetParent !== null ? tips.offsetHeight + panelGap : 0;
+      let bottom = window.innerHeight - 10; // keep the grid on-screen even if side columns push the page
+      if (main) bottom = Math.min(bottom, main.getBoundingClientRect().bottom);
+      const availH = bottom - wrapTop - padY - 2 - panelPadB - tipsH;
       if (availW <= 0 || availH <= 0) return; // not laid out yet (hidden / jsdom)
       const raw = Math.floor(Math.min(availW, availH) / gridSize);
       const px = Math.max(DESKTOP_CELL_MIN, Math.min(DESKTOP_CELL_MAX, raw));
@@ -7306,12 +7313,15 @@
     // Desktop: header wraps / packing chrome collapse change the wrap box without a window resize.
     if (typeof ResizeObserver === "function") {
       const wrapEl = el.gridWrap || document.querySelector(".grid-wrap");
+      const mainEl = document.querySelector(".main-layout");
       if (wrapEl) {
         let roRaf = 0;
-        new ResizeObserver(() => {
+        const ro = new ResizeObserver(() => {
           if (!mqDesktop.matches || roRaf) return;
           roRaf = requestAnimationFrame(() => { roRaf = 0; fitCellSizeToWrap(); });
-        }).observe(wrapEl);
+        });
+        ro.observe(wrapEl);
+        if (mainEl) ro.observe(mainEl); // header collapse (packing) changes the height budget
       }
     }
   }
