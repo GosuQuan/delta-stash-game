@@ -710,9 +710,8 @@
   let uidCounter = 1;
   let revealing = false; // sequential staging reveal in progress
   // Hotfix 空柜: loot rolled by openCrate but not yet pushed to staging (persisted so a
-  // reload / forced settle mid-reveal never loses paid items) + items delivered this round.
+  // reload / forced settle mid-reveal never loses paid items).
   let pendingRevealLoot = null;
-  let itemsDeliveredThisRound = 0;
   let revealGen = 0; // bumped per open / forced settle / new round → stale reveal loops stop
   let expandUses = 0; // monetization hook counter
   let keys = 0;
@@ -4237,7 +4236,6 @@
   function clearWarehouseAndStaging() {
     staging = [];
     pendingRevealLoot = null;
-    itemsDeliveredThisRound = 0;
     revealGen += 1;
     placed.clear();
     virtualSlots = 0;
@@ -5106,9 +5104,11 @@
       const usedDisc = nextCrateDiscountPct > 0 && rent < rentBase;
       const discPctUsed = nextCrateDiscountPct;
       if (usedDisc) nextCrateDiscountPct = 0;
+      const cashBeforeRent = cash;
       cash -= rent;
-      feePaid = rent;
-      paidFeeThisRound = rent;
+      // Store exactly what left the wallet (post discount + hall markup) — refunds use this.
+      feePaid = cashBeforeRent - cash;
+      paidFeeThisRound = feePaid;
       if (usedDisc) {
         showToast(`已使用下一柜折扣（-${Math.round(discPctUsed * 100)}%）`);
       }
@@ -5137,7 +5137,6 @@
       loot.push(makeFallbackLootEntry(tierId));
     }
     pendingRevealLoot = loot;
-    itemsDeliveredThisRound = 0;
     revealGen += 1;
     recordDailyActivityLoot(loot);
     if (tierId === "limited") recordDailyLimitedOpen();
@@ -5287,12 +5286,11 @@
     return Promise.resolve(false);
   }
 
-  /** Push one revealed entry into staging exactly once (counts toward itemsDeliveredThisRound). */
+  /** Push one revealed entry into staging exactly once. */
   function deliverToStaging(entry) {
     if (!entry || staging.some((s) => s.uid === entry.uid) || placed.has(entry.uid)) return false;
     entry._reveal = true;
     staging.push(entry);
-    itemsDeliveredThisRound += 1;
     tryUnlockCodex(entry.defId);
     return true;
   }
@@ -5378,7 +5376,7 @@
       }
       if (aborted()) return;
       // Last line of defence: a paid reveal that ended with nothing delivered gets a real 垫底货.
-      if (itemsDeliveredThisRound === 0 && staging.length === 0 && placed.size === 0) {
+      if (roundItemCount() === 0) {
         const filler = makeFallbackLootEntry(tid);
         loot.push(filler);
         deliverToStaging(filler);
@@ -5981,6 +5979,23 @@
   }
 
   // ----- Settle / round -----
+  /** Items physically present this round: temp storage + warehouse grid. */
+  function roundItemCount() {
+    return (Array.isArray(staging) ? staging.length : 0) + (placed ? placed.size : 0);
+  }
+
+  /** Settle-time empty-round refund. Returns the refunded ¥ (0 if none). */
+  function applyEmptyRoundRefund() {
+    const paid = Math.max(0, Math.round(Number(paidFeeThisRound) || 0));
+    if (paid <= 0 || roundItemCount() > 0) return 0;
+    cash += paid;
+    paidFeeThisRound = 0;
+    console.warn("[extract] 0 items at settle — refunding actual paid rent", paid);
+    showToast(`本柜未开出任何货物，租金 ${formatYen(paid)} 已全额退还`);
+    addLog(`第 ${round} 场货柜为空：租金 <strong>${formatYen(paid)}</strong> 已全额退还`);
+    return paid;
+  }
+
   function extract() {
     // Safety: if reveal somehow stuck, force-clear so settle is never soft-locked
     if (revealing && staging.length > 0 && !challengeActive) {
@@ -5992,24 +6007,11 @@
     }
     if (!crateOpenedThisRound || extractedThisRound || bankrupt || revealing || settleReplayActive) return;
     fx("uiClick");
-    // Last-resort safety net (hotfix 空柜): a paid open that delivered nothing at all is
-    // refunded in full — never charge rent for an empty crate. Not reachable on the normal
-    // path (openCrate + reveal always deliver ≥1 item); kept as a guard against future regressions.
-    let emptyCrateRefund = 0;
-    if (
-      paidFeeThisRound > 0 &&
-      itemsDeliveredThisRound === 0 &&
-      placed.size === 0 &&
-      staging.length === 0 &&
-      !(Array.isArray(pendingRevealLoot) && pendingRevealLoot.length)
-    ) {
-      emptyCrateRefund = paidFeeThisRound;
-      cash += emptyCrateRefund;
-      paidFeeThisRound = 0;
-      console.warn("[extract] empty crate settle — refunding rent", emptyCrateRefund);
-      showToast(`本柜未开出任何货物，租金 ${formatYen(emptyCrateRefund)} 已全额退还`);
-      addLog(`第 ${round} 场货柜为空：租金 <strong>${formatYen(emptyCrateRefund)}</strong> 已全额退还`);
-    }
+    // Last-resort safety net (hotfix 空柜) — the ONE place that decides a refund, and it
+    // looks only at what is physically in this round (staging + warehouse), never at any
+    // open-time record/counter. 0 items + rent paid → refund exactly the ¥ deducted at
+    // open (paidFeeThisRound = actual charge after discount + hall markup), whatever the cause.
+    const emptyCrateRefund = applyEmptyRoundRefund();
     const items = [...placed.values()];
     let bonusFromStaging = [];
     let remainingStaging = [...staging];
@@ -6111,10 +6113,12 @@
         : fee > 0 ? "-" + formatYen(fee) : "¥0（免费再租）";
       if (el.resultPerfectRow && el.resultPerfectBonus) {
         el.resultPerfectRow.hidden = !perfectPack || perfectBonus <= 0;
+        el.resultPerfectRow.style.display = el.resultPerfectRow.hidden ? "none" : "";
         el.resultPerfectBonus.textContent = perfectBonus > 0 ? "+" + formatYen(perfectBonus) : "";
       }
       if (el.resultDiscountRow && el.resultDiscount) {
         el.resultDiscountRow.hidden = !grantedNextDiscount;
+        el.resultDiscountRow.style.display = el.resultDiscountRow.hidden ? "none" : "";
         if (grantedNextDiscount) {
           el.resultDiscount.textContent =
             `下场租金 -${Math.round(PERFECT_PACK.NEXT_DISCOUNT_PCT * 100)}%（用一次）`;
@@ -6261,7 +6265,6 @@
     selectedUid = null;
     staging = [];
     pendingRevealLoot = null;
-    itemsDeliveredThisRound = 0;
     revealGen += 1;
     placed.clear();
     initGrid(gridSize);
@@ -6301,7 +6304,6 @@
     bankrupt = false;
     revealing = false;
     pendingRevealLoot = null;
-    itemsDeliveredThisRound = 0;
     revealGen += 1;
     expandUses = 0;
     keys = 0;
@@ -6541,7 +6543,6 @@
             .filter((e) => e && !staging.some((s) => s.uid === e.uid) && !placed.has(e.uid))
             .map((e) => ({ uid: e.uid, defId: e.defId, rot: e.rot || 0, valueOverride: e.valueOverride }))
         : null,
-      itemsDeliveredThisRound,
       placed: serializePlaced(),
     };
     try {
@@ -6691,7 +6692,6 @@
       : [];
 
     // Restore paid-but-unrevealed loot (saved mid-ceremony) straight into staging.
-    itemsDeliveredThisRound = Math.max(0, Number(data.itemsDeliveredThisRound) || 0);
     pendingRevealLoot = null;
     if (Array.isArray(data.pendingRevealLoot) && data.pendingRevealLoot.length && !extractedThisRound) {
       let restored = 0;
@@ -6700,10 +6700,7 @@
         staging.push({ uid: e.uid || nextUid(), defId: e.defId, rot: e.rot || 0, valueOverride: e.valueOverride });
         restored += 1;
       }
-      if (restored) {
-        itemsDeliveredThisRound += restored;
-        crateOpenedThisRound = true;
-      }
+      if (restored) crateOpenedThisRound = true;
     }
 
     initGrid(gridSize);

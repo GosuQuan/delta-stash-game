@@ -1,0 +1,11 @@
+{
+  "name": "delta-stash-game",
+  "private": true,
+  "description": "仓储拍卖开箱 — static browser game (no build step). package.json only for tests.",
+  "scripts": {
+    "test": "node tests/crate_milestones.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}
