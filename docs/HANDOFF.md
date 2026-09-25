@@ -256,11 +256,14 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-25 14:07 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-09-25 14:10 Asia/Shanghai · 负责人：游戏grok
 
 ### 本轮已交付
 - **空柜退租二修 + 开箱里程碑回归测试**（`6d72e10`，线上 `?v=20260925c`，Pages 已 built，`index.html` / `game.js` 均带 c 戳）。
   - 试玩 line6（`?v=20260925b`）复现：普通时机限时出货 ✅、华丽跳过 ✅；**第20次里程碑开限时仍 0 件且结算未退租** ✗。
+  - **测试员第 20 开 0 件 / 不退租 = 旧标签页跑的是 `?v=20260925a` 旧代码**，不是 b 的新路径：① 日志「开出 N 件」取自 `runSequentialReveal` 的 `loot.length`，b 版在此之前必补 ≥1 件，「开出 0 件」在 b 里不可达；② 残留「完美装箱奖励 / 下一柜折扣」行 = 旧 CSS；③ 无退租 = 旧 JS。该局在 13:44 左右打，而 b 在 13:39 才部署，标签页此前一直没刷新（`?v=` 只在整页重新加载时生效）；刷新后查到的 b 戳不能代表那一局；「本场日志」存进了存档（`historyLog`），刷新后那行仍在。真 Chrome 实测：旧 a 版同存档（白银、−12% 折扣、第 20 开限时）**逐字复现**「第 20 场租下限时豪华柜（-¥58,100），开出 0 件 · 货值约 ¥0」+ 残留两行；线上 b / c 版同场景第 10/20/35/75 开均出 6–9 件、残留行隐藏。
+  - 里程碑类型无关：a 版里 `applyOpenMilestoneReward` **每种**奖励（现金 / 券 / 钥匙碎片 / 限时刷新）结尾都会 `updateStats()` → `updateCrateButtons()` 把限时选择置空；50/100（限时刷新）恰好刷出新限时柜才躲过。下一柜折扣只是 `nextCrateDiscountPct = 0` + toast，不碰选择 / 暂存。b 已快照 `tierId`，已排查碎片合成（只 `keys += 1`，不自动开箱）、每日活动、厅解锁、蜜月、连胜、图鉴、音效、存档，均不会清 `tierId` / `pendingRevealLoot` / 暂存；`nextRound` / `clearWarehouseAndStaging` / `resetCareerState` 只由结算后或破产 / 新档的玩家操作触发。
+  - 回归测试运行：`npm install && npm test`（或 `npm i --no-save jsdom@24 && node tests/crate_milestones.test.js`）；里程碑列表读自 `OPEN_MILESTONE_CFG`，另含 16 个强制 0 件结算退租用例。
   - 修法：结算单一退租点 `applyEmptyRoundRefund()`——暂存+仓库实物为 0 且本场付过租 → 精确退 `paidFeeThisRound`（开箱实扣：折后+厅加价）；揭示末垫底货 guard 改用 `roundItemCount()`；结算弹层隐藏的完美/折扣行补 `display:none`。**未改经济数值**。
   - 回归：`tests/crate_milestones.test.js`（`npm test`）全柜×全厅×开箱里程碑×折扣（含蜜月）——588 开 / 5094 断言通过；旧 v=a 限时里程碑路径挂 228。
 - **经济模拟第 2 轮**（`680892f`）：`docs/sim/results.md` 只动蜜月试算；蜜月后货池与第 1 轮一致。建议把「到 ¥8 万 35–50 场」改用**稳健档**判定（中位 39 场 ✅）；保守档全押密封仍偏快（27 场），调蜜月推不动。权重仍在分支 `econ-retune`，**未合 main / 未上线**。
@@ -277,7 +280,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 - itch.io 免费评测包（等少权协助登录 / Cloudflare）
 
 ### 测试请验
-1. **限时空柜 / 退租（`?v=20260925c`，强刷）**：用保留的第35次里程碑存档开限时（有无折扣）应 ≥1 件可装箱；清档后复测第20次里程碑限时；不应再出现付满租开 0 件；若极端 0 交付，结算须**全额退实付租金**（含厅加价与折扣后）。对照 `docs/playtest-shots/line6-limited-fix/`。
+1. **限时空柜 / 退租（`?v=20260925c`；先整页刷新或新开标签，Console 确认 `game.js?v=20260925c` 后再开局——旧标签页会继续跑旧脚本）**：用保留的第35次里程碑存档开限时（有无折扣）应 ≥1 件可装箱；清档后复测第20次里程碑限时；不应再出现付满租开 0 件；若极端 0 交付，结算须**全额退实付租金**（含厅加价与折扣后）。对照 `docs/playtest-shots/line6-limited-fix/`。
 2. **结算弹层残留行**：完美装箱/折扣隐藏时不应再留空行（v=c 强刷确认，对照 `bug-stale-settle-lines.png`）。
 3. （可选）本地 `npm install && npm test` 应全绿；华丽跳过 / 柜差体感维持 line5-fx、line4-tiers 结论即可。
 
