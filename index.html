@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>仓储拍卖 · 集装箱开箱</title>
-  <link rel="stylesheet" href="style.css?v=20260926a" />
+  <link rel="stylesheet" href="style.css?v=20260926b" />
 </head>
 <body class="ads-off iap-off">
   <div id="app">
@@ -234,6 +234,18 @@
       </div>
     </div>
 
+    <div id="onboardingModal" class="modal onboarding-modal" hidden>
+      <div class="modal-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+        <p class="onboarding-kicker">DELTA STASH</p>
+        <h2 id="onboardingTitle">今天捡漏，还是血亏？</h2>
+        <p class="onboarding-copy">选个仓储柜，开箱后把值钱货塞进仓库，再转卖回本。</p>
+        <div class="onboarding-actions">
+          <button type="button" id="btnOnboardNew" class="btn primary full">我是新手 · 带我玩一局</button>
+          <button type="button" id="btnOnboardVeteran" class="btn ghost full">我是老玩家 · 直接开箱</button>
+        </div>
+      </div>
+    </div>
+
     <div id="helpModal" class="modal" hidden>
       <div class="modal-card">
         <h2>仓储拍卖规则</h2>
@@ -416,8 +428,8 @@
     </aside>
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script src="platform.js?v=20260926a"></script>
-  <script src="audio.js?v=20260926a"></script>
-  <script src="game.js?v=20260926a"></script>
+  <script src="platform.js?v=20260926b"></script>
+  <script src="audio.js?v=20260926b"></script>
+  <script src="game.js?v=20260926b"></script>
 </body>
 </html>

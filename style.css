@@ -737,6 +737,38 @@ kbd {
   line-height: 1.7;
 }
 .modal-card ol strong { color: var(--text); }
+.onboarding-card {
+  max-width: 390px;
+  text-align: center;
+  box-shadow: 0 0 0 1px rgba(78, 207, 136, 0.2), 0 18px 60px rgba(0, 0, 0, 0.48);
+}
+.onboarding-kicker {
+  margin: 0 0 8px;
+  color: var(--amber-bright);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.onboarding-copy {
+  margin: 0 0 18px;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.onboarding-actions { display: grid; gap: 9px; }
+.tutorial-focus {
+  position: relative;
+  z-index: 2100 !important;
+  outline: 3px solid var(--amber-bright);
+  outline-offset: 4px;
+  border-radius: calc(var(--radius) + 2px);
+  animation: tutorial-pulse 1.25s ease-in-out infinite;
+}
+@keyframes tutorial-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0.2), 0 0 16px rgba(245, 197, 24, 0.25); }
+  50% { box-shadow: 0 0 0 7px rgba(245, 197, 24, 0), 0 0 26px rgba(245, 197, 24, 0.55); }
+}
+@media (prefers-reduced-motion: reduce) { .tutorial-focus { animation: none; } }
 .result-score { font-size: 16px; margin-bottom: 6px; }
 .result-score strong { color: var(--amber-bright); font-size: 22px; }
 .result-meta { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }

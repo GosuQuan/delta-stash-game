@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260926a";
+  const BUILD_VERSION = "20260926b";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -835,6 +835,9 @@
     scanList: $("#scanList"),
     helpModal: $("#helpModal"),
     btnCloseHelp: $("#btnCloseHelp"),
+    onboardingModal: $("#onboardingModal"),
+    btnOnboardNew: $("#btnOnboardNew"),
+    btnOnboardVeteran: $("#btnOnboardVeteran"),
     resultModal: $("#resultModal"),
     resultTitle: $("#resultTitle"),
     resultLoot: $("#resultLoot"),
@@ -3214,6 +3217,9 @@
       cells,
       valueOverride: entry.valueOverride,
     });
+    if (tutorialStep === "pack" && crateOpenedThisRound) {
+      setTutorialStep("settle", el.btnExtract, "④ 装好了！点「转卖结算」，这局的赚亏马上揭晓。");
+    }
     return true;
   }
 
@@ -3532,6 +3538,29 @@
   }
 
   function setActionDesc(t) { el.actionDesc.textContent = t; }
+
+  // First-round teaching stays in the playfield: one highlighted action at a time,
+  // instead of front-loading a wall of rules.
+  const ONBOARDING_KEY = "deltaStashOnboardingV1";
+  let tutorialStep = null;
+  function clearTutorialFocus() {
+    document.querySelectorAll(".tutorial-focus").forEach((node) => node.classList.remove("tutorial-focus"));
+  }
+  function setTutorialStep(step, targets, hint) {
+    tutorialStep = step;
+    clearTutorialFocus();
+    (Array.isArray(targets) ? targets : [targets]).filter(Boolean).forEach((node) => node.classList.add("tutorial-focus"));
+    if (hint) setActionDesc(hint);
+  }
+  function startTutorial() {
+    if (el.onboardingModal) el.onboardingModal.hidden = true;
+    const common = el.crateTiers && el.crateTiers.querySelector('[data-tier="common"]');
+    setTutorialStep("pick", common, "① 先点「普通柜」试试手气。只要跟着亮起来的位置做。");
+  }
+  function finishTutorial() {
+    tutorialStep = null;
+    clearTutorialFocus();
+  }
 
   // ----- Cash / reveal VFX (display-only; never mutates economy) -----
   function prefersReducedMotion() {
@@ -5463,6 +5492,10 @@
       return;
     }
 
+    if (tutorialStep === "open") {
+      setTutorialStep("opening", el.stagingArea, "② 已付租金，柜门正在打开；货物会落到「开箱暂存」。");
+    }
+
     let feePaid = 0;
     let usedDisc = false;
     const cashBeforeRent = cash;
@@ -5593,6 +5626,9 @@
       document.body.classList.add("packing");
       staging = [];
       renderStaging();
+      if (tutorialStep === "opening") {
+        setTutorialStep("pack", [el.stagingArea, el.warehouseGrid], "③ 把暂存里的货拖进高亮仓库；能塞进去的都算钱。");
+      }
       Promise.resolve(runSequentialReveal(loot, tier, feePaid, tierId)).catch((err) => {
         console.warn("[openCrate] reveal failed", err);
         flushPendingRevealLoot();
@@ -6504,6 +6540,7 @@
       flushPendingRevealLoot();
     }
     if (!crateOpenedThisRound || extractedThisRound || bankrupt || revealing || settleReplayActive) return;
+    if (tutorialStep === "settle") finishTutorial();
     fx("uiClick");
     // Last-resort safety net (hotfix 空柜) — the ONE place that decides a refund, and it
     // looks only at what is physically in this round (staging + warehouse), never at any
@@ -7425,6 +7462,9 @@
         setActionDesc(
           `已看中「${tier.name}」，租金 ${formatYen(rent)}${honeymoonActive() && HONEYMOON.FEE_MULT[selectedTier] ? "（新手保护）" : ""}${discNote}。点「支付租金并开箱」向房东付款。`
         );
+        if (tutorialStep === "pick") {
+          setTutorialStep("open", el.btnOpenCrate, "② 很好！现在点亮起来的按钮，支付租金并开箱。");
+        }
       });
     });
 
@@ -7735,6 +7775,20 @@
     el.helpModal.addEventListener("click", (e) => {
       if (e.target === el.helpModal) el.helpModal.hidden = true;
     });
+    if (el.btnOnboardNew) {
+      el.btnOnboardNew.addEventListener("click", () => {
+        try { localStorage.setItem(ONBOARDING_KEY, "new"); } catch (_) { /* ignore */ }
+        startTutorial();
+      });
+    }
+    if (el.btnOnboardVeteran) {
+      el.btnOnboardVeteran.addEventListener("click", () => {
+        try { localStorage.setItem(ONBOARDING_KEY, "veteran"); } catch (_) { /* ignore */ }
+        if (el.onboardingModal) el.onboardingModal.hidden = true;
+        finishTutorial();
+        setActionDesc("选个仓储柜，开箱后把值钱货拖进仓库，再转卖结算。");
+      });
+    }
     if (el.btnCodex) {
       el.btnCodex.addEventListener("click", () => {
         fx("uiClick");
@@ -7846,6 +7900,7 @@
         if (drag.active) finishDrag(e, true);
         if (revealPause) { resolveRevealPause(false); return; }
         el.helpModal.hidden = true;
+        if (el.onboardingModal) el.onboardingModal.hidden = true;
         el.resultModal.hidden = true;
         if (el.shopModal) el.shopModal.hidden = true;
         if (el.codexModal) el.codexModal.hidden = true;
@@ -7935,9 +7990,8 @@
     trackSessionStart(!restored);
   } catch (e) { console.warn("[boot] analytics", e); }
   try {
-    if (!sessionStorage.getItem("auctionHelpSeen")) {
-      el.helpModal.hidden = false;
-      sessionStorage.setItem("auctionHelpSeen", "1");
-    }
-  } catch (_) { /* ignore */ }
+    if (!localStorage.getItem(ONBOARDING_KEY) && el.onboardingModal) el.onboardingModal.hidden = false;
+  } catch (_) {
+    if (el.onboardingModal) el.onboardingModal.hidden = false;
+  }
 })();

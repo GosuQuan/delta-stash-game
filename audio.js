@@ -6,7 +6,7 @@
   "use strict";
 
   const STORAGE_KEY = "deltaStashMute";
-  const MASTER = 0.62; // louder default; short envelopes keep peaks from clipping
+  const MASTER = 0.82; // stronger default while short envelopes keep peaks from clipping
 
   let ctx = null;
   let masterGain = null;
