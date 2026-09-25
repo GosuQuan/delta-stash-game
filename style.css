@@ -809,6 +809,8 @@ kbd {
   font-size: 13px;
   color: var(--text-dim);
 }
+/* display:flex above beat the [hidden] attr → stale 完美奖励/下一柜折扣 rows leaked into settle modal */
+.pnl-row[hidden] { display: none !important; }
 .pnl-row strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .pnl-row strong.neg { color: var(--red); }
 .pnl-row strong.pos { color: var(--green-bright); }

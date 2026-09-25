@@ -709,6 +709,11 @@
   let bankrupt = false;
   let uidCounter = 1;
   let revealing = false; // sequential staging reveal in progress
+  // Hotfix 空柜: loot rolled by openCrate but not yet pushed to staging (persisted so a
+  // reload / forced settle mid-reveal never loses paid items) + items delivered this round.
+  let pendingRevealLoot = null;
+  let itemsDeliveredThisRound = 0;
+  let revealGen = 0; // bumped per open / forced settle / new round → stale reveal loops stop
   let expandUses = 0; // monetization hook counter
   let keys = 0;
   let keyFragments = 0; // 3 → 1 key (开箱里程碑)
@@ -1236,6 +1241,32 @@
       }
     }
     return items;
+  }
+
+  /**
+   * 垫底货 (hotfix 空柜): one cheap filler for a paid open that somehow rolled nothing.
+   * Lowest allowed rarity for the tier, smallest footprint (always fits an empty 5×5),
+   * value = def.value × tier valueScale (no jitter). Never used on the normal roll path,
+   * so drop weights / EV are unchanged.
+   */
+  function makeFallbackLootEntry(tierId) {
+    const tier = CRATE_TIERS[tierId] || null;
+    const order = RARITIES.map((r) => r.id).reverse(); // white → dahong
+    const allowed = tier && tier.allowed ? order.filter((id) => tier.allowed.includes(id)) : order;
+    let pool = null;
+    for (const rid of allowed) {
+      pool = tier ? poolFor(rid, tierId) : byRarity[rid];
+      if (pool && pool.length) break;
+    }
+    if (!pool || !pool.length) pool = ITEM_DEFS;
+    let def = pool[0];
+    let best = Infinity;
+    for (const d of pool) {
+      const n = SHAPES[d.shape] ? shapeCells(d.shape, 0).length : Infinity;
+      if (n < best || (n === best && d.value < def.value)) { best = n; def = d; }
+    }
+    const scale = tier ? tierValueScale(tierId) : 1;
+    return { uid: nextUid(), defId: def.id, rot: 0, valueOverride: Math.round(def.value * scale), _fallback: true };
   }
 
   // ----- Limited-time luxury offer -----
@@ -4182,6 +4213,9 @@
 
   function clearWarehouseAndStaging() {
     staging = [];
+    pendingRevealLoot = null;
+    itemsDeliveredThisRound = 0;
+    revealGen += 1;
     placed.clear();
     virtualSlots = 0;
     keepStagingThisRound = false;
@@ -5020,12 +5054,17 @@
       updateCrateButtons();
       return;
     }
-    const tier = CRATE_TIERS[selectedTier];
+    // Snapshot the tier: side effects below (open-milestone rewards → updateStats →
+    // updateCrateButtons) clear a "limited" selection once the offer is consumed, which
+    // used to make rollLoot(null) return [] (paid ¥ but empty crate). Never re-read
+    // selectedTier after this point.
+    const tierId = selectedTier;
+    const tier = CRATE_TIERS[tierId];
     // Free tokens: common / rare dedicated, or legacy freeRent — never luxury limited
-    const freeKind = freeTokenForTier(selectedTier);
+    const freeKind = freeTokenForTier(tierId);
     const useFree = !!freeKind;
-    const rentBase = tierFee(selectedTier);
-    const rent = effectiveTierFee(selectedTier);
+    const rentBase = tierFee(tierId);
+    const rent = effectiveTierFee(tierId);
     if (!useFree && cash < rent) {
       setActionDesc(`现金不足，无法租下「${tier.name}」（需 ${formatYen(rent)}）。可看广告免费再租。`);
       updateFeePreview();
@@ -5053,13 +5092,13 @@
     }
 
     // Light key consume on sealed/limited when keys available (flavor / future currency)
-    if ((selectedTier === "sealed" || selectedTier === "limited") && keys > 0) {
+    if ((tierId === "sealed" || tierId === "limited") && keys > 0) {
       keys -= 1;
       updateKeysUI();
-      showToast(selectedTier === "limited" ? "消耗钥匙 ×1（限时柜）" : "消耗钥匙 ×1（密封柜）");
+      showToast(tierId === "limited" ? "消耗钥匙 ×1（限时柜）" : "消耗钥匙 ×1（密封柜）");
     }
     // Consuming a limited offer removes it (miss countdown otherwise)
-    if (selectedTier === "limited") {
+    if (tierId === "limited") {
       limitedOffer = null;
       if (limitedTickTimer) { clearInterval(limitedTickTimer); limitedTickTimer = null; }
     }
@@ -5068,10 +5107,18 @@
     checkOpenMilestones();
 
     const usedRareBoost = rareBoostCharges > 0;
-    const loot = rollLoot(selectedTier);
+    const loot = rollLoot(tierId);
+    // Paid/free open must never be empty — deliver a real 垫底货 up front.
+    if (!Array.isArray(loot) || loot.length === 0) {
+      console.warn("[openCrate] empty roll for", tierId, "— adding fallback item");
+      loot.push(makeFallbackLootEntry(tierId));
+    }
+    pendingRevealLoot = loot;
+    itemsDeliveredThisRound = 0;
+    revealGen += 1;
     recordDailyActivityLoot(loot);
-    if (selectedTier === "limited") recordDailyLimitedOpen();
-    if (selectedTier === "sealed") recordDailySealedOpen();
+    if (tierId === "limited") recordDailyLimitedOpen();
+    if (tierId === "sealed") recordDailySealedOpen();
     if (usedRareBoost) {
       rareBoostCharges -= 1;
       showToast("稀有仓储券已消耗");
@@ -5081,22 +5128,22 @@
     virtualSlots = 0;
     scheduleSave();
 
-    noteDailyBestFromLoot(loot, selectedTier);
+    noteDailyBestFromLoot(loot, tierId);
 
     const feeLabel = feePaid > 0 ? `已付 ${formatYen(feePaid)}` : "免费再租";
     const hall = activeAuctionHall();
     const hallId = hall ? hall.id : null;
     const audio = FX();
     const timing = (audio && typeof audio.getCrateOpenTiming === "function")
-      ? audio.getCrateOpenTiming(selectedTier)
-      : { totalMs: selectedTier === "common" ? 800 : selectedTier === "rare" ? 1200 : selectedTier === "limited" ? 2500 : 2200, phases: [] };
+      ? audio.getCrateOpenTiming(tierId)
+      : { totalMs: tierId === "common" ? 800 : tierId === "rare" ? 1200 : tierId === "limited" ? 2500 : 2200, phases: [] };
 
     // ---- Skippable industrial open ceremony (locked timings) ----
     el.scanOverlay.hidden = false;
     el.scanOverlay.classList.add("skip-ready");
     if (el.scanBox) {
       el.scanBox.classList.remove("tier-common", "tier-rare", "tier-sealed", "tier-limited");
-      el.scanBox.classList.add("tier-" + (selectedTier || "rare"));
+      el.scanBox.classList.add("tier-" + (tierId || "rare"));
     }
     el.scanTitle.textContent = `正在撬开「${tier.name}」…（${feeLabel}）`;
     if (el.scanProgress) el.scanProgress.textContent = (timing.phases[0] && timing.phases[0].cue) || "撬锁…";
@@ -5106,7 +5153,7 @@
     fx("resume");
     let openHandle = null;
     if (audio && typeof audio.playCrateOpen === "function") {
-      try { openHandle = audio.playCrateOpen(selectedTier, hallId); } catch (_) { openHandle = null; }
+      try { openHandle = audio.playCrateOpen(tierId, hallId); } catch (_) { openHandle = null; }
     }
 
     const phaseTimers = [];
@@ -5130,8 +5177,9 @@
       document.body.classList.add("packing");
       staging = [];
       renderStaging();
-      Promise.resolve(runSequentialReveal(loot, tier, feePaid)).catch((err) => {
+      Promise.resolve(runSequentialReveal(loot, tier, feePaid, tierId)).catch((err) => {
         console.warn("[openCrate] reveal failed", err);
+        flushPendingRevealLoot();
         revealing = false;
         if (el.challengeModal) el.challengeModal.hidden = true;
         challengeActive = null;
@@ -5145,7 +5193,7 @@
       // Quick lid sting so skip still feels like an open
       try {
         if (audio && typeof audio.playOpenPhaseSfx === "function") {
-          audio.playOpenPhaseSfx("lid", selectedTier, hallId);
+          audio.playOpenPhaseSfx("lid", tierId, hallId);
         }
       } catch (_) { /* ignore */ }
       finishOpen();
@@ -5216,14 +5264,44 @@
     return Promise.resolve(false);
   }
 
-  async function runSequentialReveal(loot, tier, feePaid) {
+  /** Push one revealed entry into staging exactly once (counts toward itemsDeliveredThisRound). */
+  function deliverToStaging(entry) {
+    if (!entry || staging.some((s) => s.uid === entry.uid) || placed.has(entry.uid)) return false;
+    entry._reveal = true;
+    staging.push(entry);
+    itemsDeliveredThisRound += 1;
+    tryUnlockCodex(entry.defId);
+    return true;
+  }
+
+  /** Flush any not-yet-revealed loot straight into staging (forced settle / reload mid-reveal). */
+  function flushPendingRevealLoot() {
+    const pend = pendingRevealLoot;
+    pendingRevealLoot = null;
+    if (!Array.isArray(pend)) return 0;
+    let n = 0;
+    for (const e of pend) {
+      if (e && getDef(e.defId) && deliverToStaging(e)) n += 1;
+    }
+    if (n) renderStaging();
+    return n;
+  }
+
+  async function runSequentialReveal(loot, tier, feePaid, tierId) {
     const STEP = 280;
+    const tid = tierId || (tier && tier.id) || null;
+    if (!Array.isArray(loot)) loot = [];
+    const gen = revealGen;
+    // A forced settle / new round bumps revealGen; stop drip-feeding stale loot then.
+    const aborted = () => gen !== revealGen || extractedThisRound;
     try {
-      if (!Array.isArray(loot) || loot.length === 0) {
+      if (loot.length === 0) {
+        // openCrate already guarantees loot; belt-and-suspenders — actually add the item.
+        loot.push(makeFallbackLootEntry(tid));
         showToast("本柜空空如也…已补发一件垫底货");
-        // openCrate should already guarantee loot; belt-and-suspenders
       }
       for (let i = 0; i < loot.length; i++) {
+        if (aborted()) break;
         let entry = loot[i];
         try {
           await maybeRevealAdGate(entry, i, loot.length);
@@ -5237,14 +5315,16 @@
             ]);
             loot[i] = entry;
           }
-          const def = getDef(entry.defId);
+          if (aborted()) break;
+          let def = entry && getDef(entry.defId);
           if (!def) {
-            console.warn("[reveal] missing def", entry.defId);
-            continue;
+            // Was: `continue` → item silently dropped. Swap in a 垫底货 instead.
+            console.warn("[reveal] missing def", entry && entry.defId, "— substituting fallback");
+            entry = makeFallbackLootEntry(tid);
+            loot[i] = entry;
+            def = getDef(entry.defId);
           }
-          entry._reveal = true;
-          staging.push(entry);
-          tryUnlockCodex(entry.defId);
+          deliverToStaging(entry);
           try { fx("lootTick", i, def.rarity); } catch (_) {}
           try { fx("rarityFanfare", def.rarity); } catch (_) {}
           if (allowFancyVfx() && GOLD_PLUS_RARITIES.has(def.rarity)) {
@@ -5265,10 +5345,7 @@
         } catch (err) {
           console.warn("[reveal] item error", err);
           // Still surface the item so staging is never empty mid-fail
-          if (entry && !staging.some((s) => s.uid === entry.uid)) {
-            entry._reveal = true;
-            staging.push(entry);
-            tryUnlockCodex(entry.defId);
+          if (entry && getDef(entry.defId) && !aborted() && deliverToStaging(entry)) {
             renderStaging();
           }
         }
@@ -5276,9 +5353,18 @@
           await new Promise((r) => setTimeout(r, STEP));
         }
       }
+      if (aborted()) return;
+      // Last line of defence: a paid reveal that ended with nothing delivered gets a real 垫底货.
+      if (itemsDeliveredThisRound === 0 && staging.length === 0 && placed.size === 0) {
+        const filler = makeFallbackLootEntry(tid);
+        loot.push(filler);
+        deliverToStaging(filler);
+        renderStaging();
+        showToast("本柜空空如也…已补发一件垫底货");
+      }
       await new Promise((r) => setTimeout(r, 120));
       try { fx("lootRevealEnd"); } catch (_) {}
-      const totalV = loot.reduce((s, e) => s + itemValue(e), 0);
+      const totalV = loot.reduce((s, e) => s + (getDef(e.defId) ? itemValue(e) : 0), 0);
       const feeTxt = feePaid > 0 ? `-${formatYen(feePaid)}` : "免费";
       addLog(
         `第 ${round} 场租下<strong>${tier.name}</strong>（${feeTxt}），开出 ${loot.length} 件 · 货值约 ${formatYen(totalV)}`
@@ -5306,15 +5392,21 @@
       console.warn("[reveal] fatal", err);
       showToast("开箱展示出错，已强制恢复");
     } finally {
-      revealing = false;
-      hideRevealAdBar();
-      // If challenge modal somehow left open, close it
-      if (el.challengeModal) el.challengeModal.hidden = true;
-      challengeActive = null;
-      updateStats();
-      updateWarehouseFullOffers();
-      maybeTriggerDailyJackpot();
-      scheduleSave();
+      // Superseded (forced settle / next round already took over) → leave shared state alone.
+      if (gen === revealGen) {
+        // Anything not yet shown (e.g. fatal error mid-loop) still lands in staging.
+        if (!extractedThisRound) flushPendingRevealLoot();
+        pendingRevealLoot = null;
+        revealing = false;
+        hideRevealAdBar();
+        // If challenge modal somehow left open, close it
+        if (el.challengeModal) el.challengeModal.hidden = true;
+        challengeActive = null;
+        updateStats();
+        updateWarehouseFullOffers();
+        maybeTriggerDailyJackpot();
+        scheduleSave();
+      }
     }
   }
 
@@ -5870,9 +5962,31 @@
     // Safety: if reveal somehow stuck, force-clear so settle is never soft-locked
     if (revealing && staging.length > 0 && !challengeActive) {
       revealing = false;
+      // Stop the drip-feed and land every not-yet-revealed paid item in staging first,
+      // so it is settle-counted (packed or discarded) instead of vanishing.
+      revealGen += 1;
+      flushPendingRevealLoot();
     }
     if (!crateOpenedThisRound || extractedThisRound || bankrupt || revealing || settleReplayActive) return;
     fx("uiClick");
+    // Last-resort safety net (hotfix 空柜): a paid open that delivered nothing at all is
+    // refunded in full — never charge rent for an empty crate. Not reachable on the normal
+    // path (openCrate + reveal always deliver ≥1 item); kept as a guard against future regressions.
+    let emptyCrateRefund = 0;
+    if (
+      paidFeeThisRound > 0 &&
+      itemsDeliveredThisRound === 0 &&
+      placed.size === 0 &&
+      staging.length === 0 &&
+      !(Array.isArray(pendingRevealLoot) && pendingRevealLoot.length)
+    ) {
+      emptyCrateRefund = paidFeeThisRound;
+      cash += emptyCrateRefund;
+      paidFeeThisRound = 0;
+      console.warn("[extract] empty crate settle — refunding rent", emptyCrateRefund);
+      showToast(`本柜未开出任何货物，租金 ${formatYen(emptyCrateRefund)} 已全额退还`);
+      addLog(`第 ${round} 场货柜为空：租金 <strong>${formatYen(emptyCrateRefund)}</strong> 已全额退还`);
+    }
     const items = [...placed.values()];
     let bonusFromStaging = [];
     let remainingStaging = [...staging];
@@ -5937,7 +6051,9 @@
 
     // Soft pity: consecutive below-cost settles (loot sold < rent; bonus excluded)
     const belowCost = lootValue < fee;
-    if (belowCost) {
+    if (emptyCrateRefund > 0) {
+      // refunded empty crate: neither a win nor a loss
+    } else if (belowCost) {
       lossStreak += 1;
       losses += 1;
     } else {
@@ -5945,10 +6061,11 @@
       wins += 1;
     }
     // 「热手」：连续盈利（净利 >= 0）；与 pity 的 belowCost 计数分开持久化
-    if (profit) profitStreak += 1;
+    if (emptyCrateRefund > 0) { /* streak unchanged */ }
+    else if (profit) profitStreak += 1;
     else profitStreak = 0;
 
-    if (zeroDiscard) recordDailyZeroDiscard();
+    if (zeroDiscard && soldEntries.length > 0) recordDailyZeroDiscard();
     if (perfectPack) recordDailyPerfectPack();
 
     const sortedSold = soldEntries
@@ -5966,7 +6083,9 @@
           ? "本场盈利！"
           : "本场亏损…";
       el.resultLoot.textContent = formatYen(lootValue);
-      el.resultFee.textContent = fee > 0 ? "-" + formatYen(fee) : "¥0（免费再租）";
+      el.resultFee.textContent = emptyCrateRefund > 0
+        ? `¥0（空柜已退 ${formatYen(emptyCrateRefund)}）`
+        : fee > 0 ? "-" + formatYen(fee) : "¥0（免费再租）";
       if (el.resultPerfectRow && el.resultPerfectBonus) {
         el.resultPerfectRow.hidden = !perfectPack || perfectBonus <= 0;
         el.resultPerfectBonus.textContent = perfectBonus > 0 ? "+" + formatYen(perfectBonus) : "";
@@ -6118,6 +6237,9 @@
     selectedTier = null;
     selectedUid = null;
     staging = [];
+    pendingRevealLoot = null;
+    itemsDeliveredThisRound = 0;
+    revealGen += 1;
     placed.clear();
     initGrid(gridSize);
     round += 1;
@@ -6155,6 +6277,9 @@
     extractedThisRound = false;
     bankrupt = false;
     revealing = false;
+    pendingRevealLoot = null;
+    itemsDeliveredThisRound = 0;
+    revealGen += 1;
     expandUses = 0;
     keys = 0;
     keyFragments = 0;
@@ -6387,6 +6512,13 @@
         rot: e.rot,
         valueOverride: e.valueOverride,
       })),
+      // Paid loot not yet revealed (reload mid-ceremony must not eat the rent)
+      pendingRevealLoot: Array.isArray(pendingRevealLoot)
+        ? pendingRevealLoot
+            .filter((e) => e && !staging.some((s) => s.uid === e.uid) && !placed.has(e.uid))
+            .map((e) => ({ uid: e.uid, defId: e.defId, rot: e.rot || 0, valueOverride: e.valueOverride }))
+        : null,
+      itemsDeliveredThisRound,
       placed: serializePlaced(),
     };
     try {
@@ -6534,6 +6666,22 @@
           valueOverride: e.valueOverride,
         })).filter((e) => getDef(e.defId))
       : [];
+
+    // Restore paid-but-unrevealed loot (saved mid-ceremony) straight into staging.
+    itemsDeliveredThisRound = Math.max(0, Number(data.itemsDeliveredThisRound) || 0);
+    pendingRevealLoot = null;
+    if (Array.isArray(data.pendingRevealLoot) && data.pendingRevealLoot.length && !extractedThisRound) {
+      let restored = 0;
+      for (const e of data.pendingRevealLoot) {
+        if (!e || !getDef(e.defId) || staging.some((s) => s.uid === e.uid)) continue;
+        staging.push({ uid: e.uid || nextUid(), defId: e.defId, rot: e.rot || 0, valueOverride: e.valueOverride });
+        restored += 1;
+      }
+      if (restored) {
+        itemsDeliveredThisRound += restored;
+        crateOpenedThisRound = true;
+      }
+    }
 
     initGrid(gridSize);
     placed.clear();
