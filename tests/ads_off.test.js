@@ -74,6 +74,13 @@ function makeWorld(seed) {
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 async function waitFor(pred, max = 20000) { for (let i = 0; i < max; i++) { if (pred()) return true; await tick(); } return false; }
+async function finishReveal(w, pred) {
+  return waitFor(() => {
+    const deck = w.document.querySelector("#revealDeck");
+    if (deck && !deck.hidden) w.document.querySelector("#btnDecryptNext")?.click();
+    return pred();
+  });
+}
 
 let pass = 0, fail = 0; const failures = [];
 function check(cond, msg) { if (cond) pass++; else { fail++; failures.push(msg); } }
@@ -148,9 +155,8 @@ async function main() {
       T.openCrate();
       const ov = w.document.querySelector("#scanOverlay");
       if (ov) ov.dispatchEvent(new w.Event("pointerdown"));
-      // the old reveal-ad prompt must never block: the reveal must finish on its own
-      const ok = await waitFor(() => T.crateOpenedThisRound && !T.revealing);
-      check(ok, `[${tag}] reveal finished without an ad prompt`);
+      const ok = await finishReveal(w, () => T.crateOpenedThisRound && !T.revealing);
+      check(ok, `[${tag}] reveal finished after item decrypt clicks`);
       check(T.staging.length + T.placed.size > 0, `[${tag}] items delivered`);
       phase(w, `${tag} after open`);
       greedyPack(T);

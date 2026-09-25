@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260926b";
+  const BUILD_VERSION = "20260926c";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -735,6 +735,7 @@
   // reload / forced settle mid-reveal never loses paid items).
   let pendingRevealLoot = null;
   let revealGen = 0; // bumped per open / forced settle / new round → stale reveal loops stop
+  let decryptPrompt = null; // current player-click gate for the sequential item reveal
   let expandUses = 0; // monetization hook counter
   let ownedGridMax = 5; // largest warehouse size bought (permanent; default 5×5)
   let keys = 0;
@@ -879,6 +880,10 @@
     btnEvalPanelClose: $("#btnEvalPanelClose"),
     btnEvalExit: $("#btnEvalExit"),
     stagingPanel: $("#stagingPanel"),
+    revealDeck: $("#revealDeck"),
+    btnDecryptNext: $("#btnDecryptNext"),
+    decryptTitle: $("#decryptTitle"),
+    decryptHint: $("#decryptHint"),
     dataPanel: $("#dataPanel"),
     dataPanelList: $("#dataPanelList"),
     limitedOfferPanel: $("#limitedOfferPanel"),
@@ -4605,6 +4610,7 @@
   }
 
   function clearWarehouseAndStaging() {
+    cancelDecryptPrompt();
     staging = [];
     pendingRevealLoot = null;
     revealGen += 1;
@@ -5680,6 +5686,9 @@
     const listAt = Math.max(0, timing.totalMs - 280);
     phaseTimers.push(setTimeout(() => {
       if (finished) return;
+      // Keep the ceremony spoiler-free: names, rarity and values are only shown after the player decrypts each item.
+      el.scanList.innerHTML = `<li><span style="font-size:18px">🔐</span><span>发现 ${loot.length} 件未鉴定物件</span></li>`;
+      return;
       loot.forEach((entry, i) => {
         const def = getDef(entry.defId);
         if (!def) return;
@@ -5702,6 +5711,34 @@
   function hideRevealAdBar() {
     if (el.revealAdBar) el.revealAdBar.hidden = true;
     revealPause = null;
+  }
+
+  function hideDecryptPrompt() {
+    if (el.revealDeck) el.revealDeck.hidden = true;
+  }
+
+  function cancelDecryptPrompt() {
+    const prompt = decryptPrompt;
+    decryptPrompt = null;
+    hideDecryptPrompt();
+    if (prompt && typeof prompt.resolve === "function") prompt.resolve(false);
+  }
+
+  function waitForDecrypt(index, total) {
+    if (el.revealDeck) el.revealDeck.hidden = false;
+    if (el.decryptTitle) el.decryptTitle.textContent = `未鉴定物件 · ${index + 1} / ${total}`;
+    if (el.decryptHint) el.decryptHint.textContent = "点击它，亲手解开里面是什么。";
+    setActionDesc(`发现第 ${index + 1} 件未鉴定物件。点「点击揭晓」逐件解密。`);
+    return new Promise((resolve) => { decryptPrompt = { resolve }; });
+  }
+
+  function decryptNextItem() {
+    const prompt = decryptPrompt;
+    if (!prompt) return;
+    decryptPrompt = null;
+    hideDecryptPrompt();
+    try { fx("uiClick"); } catch (_) { /* ignore */ }
+    prompt.resolve(true);
   }
 
   function resolveRevealPause(watched) {
@@ -5727,6 +5764,7 @@
 
   /** Flush any not-yet-revealed loot straight into staging (forced settle / reload mid-reveal). */
   function flushPendingRevealLoot() {
+    cancelDecryptPrompt();
     const pend = pendingRevealLoot;
     pendingRevealLoot = null;
     if (!Array.isArray(pend)) return 0;
@@ -5756,7 +5794,8 @@
         let entry = loot[i];
         try {
           await maybeRevealAdGate(entry, i, loot.length);
-          await new Promise((r) => setTimeout(r, 40));
+          const clicked = await waitForDecrypt(i, loot.length);
+          if (!clicked || aborted()) break;
           // Value-threshold timed challenge (disabled when FEATURES.CHALLENGE_ENABLED=false)
           if (FEATURES.CHALLENGE_ENABLED && shouldChallengeItem(entry)) {
             entry = await Promise.race([
@@ -5800,9 +5839,7 @@
             renderStaging();
           }
         }
-        if (i < loot.length - 1) {
-          await new Promise((r) => setTimeout(r, STEP));
-        }
+        if (i < loot.length - 1) await new Promise((r) => setTimeout(r, STEP));
       }
       if (aborted()) return;
       // Last line of defence: a paid reveal that ended with nothing delivered gets a real 垫底货.
@@ -5849,6 +5886,7 @@
         if (!extractedThisRound) flushPendingRevealLoot();
         pendingRevealLoot = null;
         revealing = false;
+        cancelDecryptPrompt();
         hideRevealAdBar();
         // If challenge modal somehow left open, close it
         if (el.challengeModal) el.challengeModal.hidden = true;
@@ -6531,6 +6569,10 @@
   }
 
   function extract() {
+    if (revealing && decryptPrompt) {
+      showToast("先逐件解密完这一柜的物件，再结算。");
+      return;
+    }
     // Safety: if reveal somehow stuck, force-clear so settle is never soft-locked
     if (revealing && staging.length > 0 && !challengeActive) {
       revealing = false;
@@ -7469,6 +7511,7 @@
     });
 
     el.btnOpenCrate.addEventListener("click", openCrate);
+    if (el.btnDecryptNext) el.btnDecryptNext.addEventListener("click", decryptNextItem);
         el.btnRotate.addEventListener("pointerdown", (e) => {
       // During drag, rotate on press without waiting for click (click would end drag via pointerup)
       if (drag.active || drag.pending || selectedUid) {

@@ -82,6 +82,13 @@ function makeWorld(seed, opts = {}) {
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 async function waitFor(pred, max = 20000) { for (let i = 0; i < max; i++) { if (pred()) return true; await tick(); } return false; }
+async function finishReveal(w, pred) {
+  return waitFor(() => {
+    const deck = w.document.querySelector("#revealDeck");
+    if (deck && !deck.hidden) w.document.querySelector("#btnDecryptNext")?.click();
+    return pred();
+  });
+}
 let pass = 0, fail = 0; const failures = [];
 function check(cond, msg) { if (cond) pass++; else { fail++; failures.push(msg); } }
 
@@ -92,7 +99,7 @@ async function playRound(w, tier = "common") {
   const T = w.__T;
   T.selectTier(tier);
   T.openCrate();
-  const opened = await waitFor(() => T.crateOpenedThisRound && !T.revealing);
+  const opened = await finishReveal(w, () => T.crateOpenedThisRound && !T.revealing);
   T.extract();
   await waitFor(() => !T.settleReplayActive, 2000);
   await waitFor(() => false, 5);

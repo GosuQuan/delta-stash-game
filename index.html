@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>仓储拍卖 · 集装箱开箱</title>
-  <link rel="stylesheet" href="style.css?v=20260926b" />
+  <link rel="stylesheet" href="style.css?v=20260926c" />
 </head>
 <body class="ads-off iap-off">
   <div id="app">
@@ -135,6 +135,13 @@
         <div class="panel-header staging-header">
           <h2>开箱暂存</h2>
           <span class="hint-inline" id="stagingCount">0 件</span>
+        </div>
+        <div id="revealDeck" class="reveal-deck" hidden>
+          <button type="button" id="btnDecryptNext" class="decrypt-card">
+            <span class="decrypt-lock" aria-hidden="true">🔐</span>
+            <span class="decrypt-copy"><strong id="decryptTitle">发现未鉴定物件</strong><small id="decryptHint">点击解密第 1 件</small></span>
+            <span class="decrypt-tap">点击揭晓</span>
+          </button>
         </div>
         <div id="stagingArea" class="staging-area" aria-label="暂存区物品">
           <div class="empty-hint" id="stagingEmpty">
@@ -428,8 +435,8 @@
     </aside>
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script src="platform.js?v=20260926b"></script>
-  <script src="audio.js?v=20260926b"></script>
-  <script src="game.js?v=20260926b"></script>
+  <script src="platform.js?v=20260926c"></script>
+  <script src="audio.js?v=20260926c"></script>
+  <script src="game.js?v=20260926c"></script>
 </body>
 </html>

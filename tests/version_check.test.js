@@ -91,6 +91,13 @@ function makeWorld(remoteVersion) {
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
 async function waitFor(pred, max = 20000) { for (let i = 0; i < max; i++) { if (pred()) return true; await tick(); } return false; }
+async function finishReveal(w, pred) {
+  return waitFor(() => {
+    const deck = w.document.querySelector("#revealDeck");
+    if (deck && !deck.hidden) w.document.querySelector("#btnDecryptNext")?.click();
+    return pred();
+  });
+}
 async function settle(w) { for (let i = 0; i < 200; i++) await tick(); }
 const banner = (w) => w.document.getElementById("updateBanner");
 const bannerVisible = (w) => !!banner(w) && !banner(w).hidden;
@@ -125,7 +132,7 @@ async function main() {
     check(!bannerVisible(w), "no banner during open");
     const ov = w.document.querySelector("#scanOverlay");
     if (ov) ov.dispatchEvent(new w.Event("pointerdown"));
-    const revealed = await waitFor(() => V.crateOpenedThisRound && !V.revealing);
+    const revealed = await finishReveal(w, () => V.crateOpenedThisRound && !V.revealing);
     check(revealed, "reveal finished");
     V.resetThrottle();
     V.checkForUpdate("test-packing");

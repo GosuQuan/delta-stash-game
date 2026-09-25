@@ -92,6 +92,13 @@ function makeWorld(seed) {
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 async function waitFor(pred, max = 20000) { for (let i = 0; i < max; i++) { if (pred()) return true; await tick(); } return false; }
+async function finishReveal(w, pred) {
+  return waitFor(() => {
+    const deck = w.document.querySelector("#revealDeck");
+    if (deck && !deck.hidden) w.document.querySelector("#btnDecryptNext")?.click();
+    return pred();
+  });
+}
 
 function greedyPack(T) {
   const gs = T.gridSize();
@@ -119,7 +126,7 @@ async function openOnce(w, o) {
   const cashAfterOpen = T.cash;
   const ov = w.document.querySelector("#scanOverlay");
   if (ov) ov.dispatchEvent(new w.Event("pointerdown"));
-  const ok = await waitFor(() => T.crateOpenedThisRound && !T.revealing);
+  const ok = await finishReveal(w, () => T.crateOpenedThisRound && !T.revealing);
   return { T, expectedFee, msCash, cash0, cashAfterOpen, ok };
 }
 
