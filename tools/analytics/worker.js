@@ -18,7 +18,7 @@ const EVENTS = new Set([
 const COMMON = {
   ts: "int", schema: "int", ev: "str", pid: "str", sid: "str", save: "str",
   build: "str", econ: "str", round: "int", cash: "int", peak: "int",
-  hall: "str", grid: "int", honeymoon: "bool", eval: "bool", dev: "str", vw: "str",
+  hall: "str", grid: "int", honeymoon: "bool", eval: "bool", eval_tainted: "bool", dev: "str", vw: "str",
 };
 const COLS = Object.keys(COMMON);
 

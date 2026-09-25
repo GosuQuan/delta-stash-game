@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS events (
   hall        TEXT,
   grid        INTEGER,
   honeymoon   INTEGER,
-  eval        INTEGER,                   -- 评测模式 1 / 真人 0
+  eval        INTEGER,                   -- 本条发生在评测模式 1 / 否 0
+  eval_tainted INTEGER,                  -- 存档进过评测（可能有加过的钱、免费尺寸）1 / 否 0
   dev         TEXT,                      -- mobile / pc
   vw          TEXT,                      -- 视口宽度分档
   props       TEXT                       -- 事件私有字段（JSON）
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS daily_settle (
   PRIMARY KEY (day, econ, tier_group, tier, honeymoon_open, grid)
 );
 
--- 以下视图默认排除评测模式（eval = 1）
+-- 以下视图默认排除评测模式（eval = 1）和进过评测的存档（eval_tainted = 1）
 DROP VIEW IF EXISTS v_settle;
 CREATE VIEW v_settle AS
 SELECT id, received_at, pid, save, sid, build, econ, round, cash, grid, hall, dev, vw, country,
@@ -59,7 +60,7 @@ SELECT id, received_at, pid, save, sid, build, econ, round, cash, grid, hall, de
   json_extract(props, '$.challenge_ok')    AS challenge_ok,
   json_extract(props, '$.rent_cash_pct')   AS rent_cash_pct,
   json_extract(props, '$.dur_s')           AS dur_s
-FROM events WHERE ev = 'round_settle' AND eval = 0;
+FROM events WHERE ev = 'round_settle' AND eval = 0 AND COALESCE(eval_tainted, 0) = 0;
 
 DROP VIEW IF EXISTS v_challenge;
 CREATE VIEW v_challenge AS
@@ -73,4 +74,4 @@ SELECT id, received_at, pid, save, econ, round, hall,
   json_extract(props, '$.hit_rate')     AS hit_rate,
   json_extract(props, '$.protect')      AS protect,
   json_extract(props, '$.answer_ms')    AS answer_ms
-FROM events WHERE ev = 'challenge_result' AND eval = 0;
+FROM events WHERE ev = 'challenge_result' AND eval = 0 AND COALESCE(eval_tainted, 0) = 0;

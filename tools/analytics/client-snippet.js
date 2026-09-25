@@ -79,6 +79,7 @@
       round, cash: Math.round(cash), peak: Math.round(peakCash),
       hall: hall ? hall.id : null, grid: gridSize,
       honeymoon: !!honeymoonActive(), eval: !!evalMode,
+      eval_tainted: evalTainted ? 1 : 0, // 存档进过评测：由 grok 在存档里持久化，只有新开档清零
     }, analyticsDev(), fields || {});
     window.__analyticsLog.push(e);
     if (window.__analyticsLog.length > ANALYTICS.LOCAL_MAX) window.__analyticsLog.shift();
