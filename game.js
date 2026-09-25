@@ -5291,8 +5291,11 @@
         const shape = entry.shape || (def && def.shape);
         return sum + (shape ? shapeCells(shape, entry.rot || 0).length : 0);
       }, 0);
+      // Warehouse is cleared each settle, so judge by how much of the free space
+      // this crate's loot would eat (irregular shapes rarely pack past ~60%).
       const spaceTight =
         freeCells < stagingCellsNeeded ||
+        (freeCells > 0 && stagingCellsNeeded / freeCells >= 0.6) ||
         (warehouseCells > 0 && occupiedCells / warehouseCells >= 0.55);
       setActionDesc(
         feePaid > 0

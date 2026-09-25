@@ -60,7 +60,7 @@
 | 柜 | id | fee | 件数 |
 |---|---|---:|---|
 | 普通柜 | common | **¥4,500** | 5–7 |
-| 精选柜 | rare | **¥15,000** | 5–7 |
+| 精选柜 | rare | **¥13,800** | 5–7 |
 | 密封柜 | sealed | **¥30,000** | 5–8 |
 | 限时豪华柜 | limited | **¥60,000** | 6–9 |
 
@@ -75,7 +75,6 @@
 ### 拍卖厅（`AUCTION_HALL_CFG.TIERS`，峰值现金）
 
 | 厅 | 峰值门槛 | 金红权重 | 租金上浮 |
-|---|---:|---:|---:|
 |---|---:|---:|---:|
 | 青铜拍卖厅 | ¥40,000 | **+3%** | +5% |
 | 翡翠拍卖厅 | ¥80,000 | **+5%** | +8% |
@@ -257,32 +256,26 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-23 04:05 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-09-25 12:30 Asia/Shanghai · 负责人：游戏grok
 
 ### 本轮已交付
-- **开箱灰阻塞**：根因 `setEvalMode→updateStats→usedCells` 在 grid 未初始化时抛错；已加空值保护 + boot try/catch。
-- **PC 滚动/裁切**：桌面 `@media (min-width:961px)` 去掉 `overflow:hidden` 锁死，允许页面纵向滚动。
-- **窄屏装箱沉浸（结构修复）**：`#stagingArea` 从 `.crate-panel` 挪到独立 `.staging-panel`；`body.packing` 可再藏 crate chrome；短屏 48px 规则改为仅 lobby，packing 强制 ≥80px；开箱 `finishOpen` 立即挂 `body.packing`。
-- **评测底栏 sheet**：`evalMode` 与面板可见性分离；仅进入 packing 那一帧收起；点「评测」开/收面板不退出模式；sheet 有「关闭」「退出评测」；`:not([hidden]){display:block!important}` + z-index 200。
-- **移动端沉浸**：`body.packing` 隐藏帮助噪点/部分顶栏；仓库格 `fitCellSizeToWrap` 按容器宽适配。
-- **格子提示叠层**：`mini-shape` 叠在 `item-art` 右下角，暂存卡更扁；packing 永不藏 mini-shape。
-- **蜜月加长**：`ROUNDS 4→5`，`CASH_END ¥20k→¥45k`。
-- **GitHub**：已推 `https://github.com/GosuQuan/delta-stash-game`（验收仍以本机 `?eval=1` 为准）。
-- **跟随球鉴宝**：贵货挑战 50% 抽跟随球 / 50% 答题（见前）。
-- **精选柜租金微调**：基础租金 ¥15,000→¥13,800，服务中盘 EV 向轻亏损至盈亏平衡靠拢；密封/限时柜不变。
+- **本轮无新代码**：`game.js` / `style.css` / `index.html` / `audio.js` 自 2026-09-23 起未改；仓库 `main` 仍停在 `b1e388d`（空间紧张门控 + 精选柜租金下调）。
+- **精选柜租金（代码实值）**：`CRATE_TIERS.rare.fee = **¥13,800**`（§③ 表已对齐；密封 ¥30,000 / 限时 ¥60,000 不变）。
+- **既有交付仍有效**（摘要）：开箱灰保护、PC 可滚、窄屏 staging-panel、评测底栏 sheet、蜜月 5 场/¥45k、跟随球鉴宝、空间紧张按仓容门控、GitHub `GosuQuan/delta-stash-game`。
 
 ### 进行中
-- 等测试玩家窄屏复验（暂存可见 + 评测 sheet 可再开）
+- 游戏侧：待命（无新需求开工）；等测试/商业化验收结论后再动数值或 UX。
+- 阻塞：本机 Windows 副本未连上（`DESKTOP-EC6TT58` / Mac 均 offline），本轮无法同步 `C:\Users\admin\delta-stash-game\docs\HANDOFF.md`。
 
 ### 下一里程碑（商业化已立项，未开工）
 - 主题季 + 玩法切换（赤金厅终局扩展）
 - itch.io 上传（等登录）
 
 ### 测试请验
-1. 窄屏 390×844 · `?eval=1`：开箱后「开箱暂存」条必须出现在顶栏与仓库之间，卡可点可拖；`body.packing` 下 crate 档位可藏
-2. 装箱中点「评测」→ 底栏 sheet 弹出；再点「评测」或「关闭」只收起；「退出评测」才关模式
-3. 5×5 格完整 + 结算链路保持
-4. PC：Ctrl+F5，整页可滚
+1. 对照 `game.js`：精选柜租金是否已是 **¥13,800**（蜜月倍率后约 ¥11,040），勿再按旧口头 ¥15,000 验收。
+2. 窄屏 390×844 · `?eval=1`：开箱后暂存条可见可拖；装箱中「评测」sheet 可再开/关闭（不退出模式）。
+3. 低占用开箱：「空间紧张」仅在剩余格不够或占用率 ≥55% 时出现。
+
 
 
 ---
@@ -318,8 +311,8 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑫ 试玩日志（测试玩家 · 每 ~25 分钟）
 
-> 最近更新：2026-09-23 04:39 Asia/Shanghai · 负责人：游戏测试玩家  
-> 截图：`docs/playtest-shots/line1-retest2/`、`docs/playtest-shots/line-followball/`、`docs/playtest-shots/line3-narrow/`（含 `v2-*.png`）、`docs/playtest-shots/line2-mid/`（`01-start`…`04-settle` + `bug-space-tight`）
+> 最近更新：2026-09-25 12:45 Asia/Shanghai · 负责人：游戏测试玩家  
+> 截图：`docs/playtest-shots/line1-retest2/`、`docs/playtest-shots/line-followball/`、`docs/playtest-shots/line3-narrow/`（含 `v2-*.png`）、`docs/playtest-shots/line2-mid/`、`docs/playtest-shots/line2-verify-0925/`（`01-rare-fee` / `02-low-occ-open`）
 
 ### 已测线路
 | 线路 | 状态 | 备注 |
@@ -351,7 +344,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | 蜜月过短 | 可改 ✅（已自然结束并进翡翠厅） |
 | 窄屏装箱沉浸 / PC·移动复验 | **建议改 ✅**（试玩 v2 复验通过；截图 `line3-narrow/v2-*.png`）；⑩「等测试玩家窄屏复验」可勾掉 |
 | 贵货守住 / 跟随球 | 仍 ⏳→🔄；玩法可达，优先补自然经济样本 |
-| 「空间紧张」文案 | ✅ 已修：按剩余格数与占用率（≥55%）门控；低占用且能容纳暂存货物时不提示 |
+| 「空间紧张」文案 | 低占用不误报 ✅；高占用该弹不弹 → 09-25 补：本场货物形状总格 ≥ 剩余格 60% 也提示（仓库每场结算清空，原 ≥55% 占用条件开箱时几乎不成立） |
 | 评测 UI（底栏 sheet） | 建议 🔄→偏 ✅：可再开已验；若必须「底栏小 sheet」形态再打磨叠层 |
 | 中盘经济体感（翡翠厅） | 🔄 样本：场次~20 / 现金~¥10万 / 单场可小亏（租金略高于货价）——暂无阻塞，继续冲赤金门槛 |
 
@@ -362,3 +355,4 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 - **2026-09-23 03:43–03:55** · line3-narrow：窄屏/沉浸复验；暂存隐藏 + 装箱货品不显示 + 评测 sheet 缺失/叠层均仍在；放弃结算遗弃 7 件确认「看不见的暂存」；翡翠厅场次约 17、现金约 ¥52.9k（含评测加钱）。
 - **2026-09-23 04:07–04:09** · line3-narrow v2：对照 ⑩ 结构修复后再验——暂存可见、货卡可拖装箱、评测可再开、转卖结算正常；翡翠厅场次 18、现金约 ¥98.1k（含评测加钱）、本场遗弃 5 件 / 亏损 −¥4,736；截图 `v2-01-staging.png` … `v2-04-settle.png`。
 - **2026-09-23 04:23–04:37** · line2-mid：中盘续玩至场次约 20、翡翠厅、现金约 ¥101,304；摸到限时神秘柜（约 ¥44.8k）与翡翠厅说明弹层；第20场结算本场 −¥352（货 ¥13,898 / 租 ¥14,250）；**「空间紧张」在 1/25（4%）开箱仍弹**（`bug-space-tight.png`）；截图 `line2-mid/01-start.png` … `04-settle.png`。
+- **2026-09-25 12:42–12:45** · line2-verify-0925：对照 ⑩「测试请验」——清档蜜月场次1、现金¥15k；精选柜标价 **¥11,050**（≈13800×0.8）；普通柜开箱后占用 **0/25（0%）**，行动文案无「空间紧张」、走正常装箱提示；无硬阻塞。截图 `01-rare-fee.png`、`02-low-occ-open.png`。
