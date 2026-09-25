@@ -256,31 +256,28 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-25 13:06 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-09-25 13:26 Asia/Shanghai · 负责人：游戏grok
 
 ### 本轮已交付
-- **线上缓存戳**（`aee6a72`）：`index.html` 给 `style.css` / `platform.js` / `audio.js` / `game.js` 加 `?v=20260925a`，避免 Pages 继续吃旧脚本（本地 line2-tight-bc4f 精选漏报已确认是旧 `game.js` 缓存）。
-- **「空间紧张」门控**（`bc4f5b8`）：本场货物形状总格 / 剩余格 **≥ 0.6** 也提示；⑪ 已整条收 ✅，⑫ 线上强刷复踩通过（约 18/17 格弹、约 14 格不弹）。
-- **GitHub Pages**：`.nojekyll`（`45229d4`）+ 免广告试玩 https://gosuquan.github.io/delta-stash-game/
-- **门户变现桥**（`ef07d53` / `platform.js`）：CrazyGames / Poki / local；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`；IAP/一键整理 stub **仅 local**。
-- **精选柜租金（代码实值）**：`CRATE_TIERS.rare.fee = **¥13,800**`（蜜月 UI **¥11,050** = `round(13800×0.8/50)×50`；密封 ¥30,000 / 限时 ¥60,000）。代码 tip `aee6a72`（缓存戳）；其后 docs 提交会叠在 `main` 上。
-- **既有交付仍有效**：开箱灰保护、PC 可滚、窄屏 staging-panel、评测底栏 sheet、蜜月 5 场/¥45k、跟随球鉴宝、GitHub `GosuQuan/delta-stash-game`。
+- **无新 `game.js` 改动**（`main` tip 仍为 `aee6a72` 缓存戳；其后仅 docs：`0b4400e` / `3564a51` / `e818ba2`）。
+- **空柜保底已在线上代码**：付费开箱强制暂存 ≥1 件（`game.js` `rollLoot` 尾部注释「Paid open must never yield empty staging」）；⑪ 决策里「空柜 bug 先单独上线」与现网一致，无需再发补丁。
+- **既有交付仍有效**：`?v=20260925a` 缓存戳、`bc4f5b8` 空间紧张（≥0.6）、Pages https://gosuquan.github.io/delta-stash-game/ 、门户 `platform.js`、精选 `fee=13800` / 蜜月 UI ¥11,050、开箱灰保护、PC 可滚、窄屏 staging、评测 sheet、蜜月 5 场/¥45k、跟随球鉴宝。
+- **数值核对（以 `game.js` 为准）**：启动 ¥15,000；柜租 4500 / **13800** / 30000 / 60000；蜜月 ROUNDS=5 · CASH_END=45000；厅峰 4万/8万/**18万/28万/40万**；物品表 **129**；`JACKPOT_CHANCE=0.12`；重整 ¥5,850；`ORGANIZE_DAILY_FREE_QUOTA=1`；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`（Pages 免广告）。
 
 ### 进行中
-- 游戏侧：空间紧张与缓存戳已合入并被商业化/测试收口；无新玩法改动在编。
+- 游戏侧：**待命** ⑪「经济重调」——只调货池权重、不涨租金；目标比值/赚钱概率与节奏见 ⑪；待 `docs/sim/` 结果表确认后再改 `game.js` 权重并推线上。本地有未跟踪 `docs/sim/tier_ev.js`（只读模拟器，未改玩法）。
 - 阻塞：本机 Windows / Mac 副本均 offline（`DESKTOP-EC6TT58`、`MacBookPro.bbrouter`），本轮无法同步 `C:\Users\admin\delta-stash-game\docs\HANDOFF.md`。
 
 ### 下一里程碑（商业化已立项，未开工）
+- 经济重调合入 `main`（权重 + 空柜已齐 → 只差权重表）
 - 路线图柜型（夜班柜 → 双联柜 → 命运柜等，见 ⑪）；百万以后不加爆率
 - itch.io 免费评测包（等少权协助登录 / Cloudflare）
 
 ### 测试请验
-1. Pages 普通刷新（非强刷）是否已吃到 `?v=20260925a`（交易面板「空间紧张」规则与线上强刷一致）。
-2. 柜差体感（普通 → 精选 → 密封 → 限时）：⑪ 仍 ⏳；可按测试「line4-tiers」线上版推进。
-3. 贵货自然触发守住（题 / 跟随球）或华丽结算对比：⑪ 仍 ⏳，有样本请贴 ⑫。
+1. 柜差体感（普通 → 精选 → 密封 → 限时）：仓库已有 `docs/playtest-shots/line4-tiers/` 截图，请把结论写进 ⑫（⑪ 密封仍标「太赚」）。
+2. 华丽 vs 流畅结算：已有 `docs/playtest-shots/line5-fx/`，请对照写进 ⑫ / ⑪「华丽结算对比」。
+3. Pages 普通刷新是否已吃到 `?v=20260925a`（空间紧张规则与强刷一致）。
 
-
----
 
 ## ⑪ 商业化验收日志（每 ~25 分钟刷新）
 
