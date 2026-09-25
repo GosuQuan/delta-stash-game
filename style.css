@@ -1289,7 +1289,11 @@ kbd {
 }
 
 
-/* ----- Desktop: prefer one-screen play, but allow page scroll if chrome is tall ----- */
+/* ----- Desktop (≥961px, layout e): warehouse grid is the centre stage -----
+ * Columns: left = 仓储单元 + 开箱暂存 · centre = 转运仓库 (tools row + grid) · right = 交易面板 + 货物详情.
+ * #app is exactly one viewport tall (min 600px); side columns scroll internally if they must,
+ * the grid never does. --cell-size is fitted by JS (fitCellSizeToWrap) to the .grid-wrap box
+ * (width AND height) so every size 5×5…8×8 is fully visible with no scrollbar. */
 @media (min-width: 961px) {
   html, body {
     height: auto;
@@ -1299,43 +1303,168 @@ kbd {
     overflow-y: auto;
   }
   #app {
-    min-height: 100dvh;
-    height: auto;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 600px;
     max-height: none;
+    max-width: 1640px;
     overflow: visible;
-    padding-bottom: 16px;
+    padding: 10px 14px;
+    gap: 10px;
   }
+  /* Compact header: [brand | stats | controls] then [daily banner | save hint] */
+  .top-bar {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: auto minmax(380px, 1fr) minmax(0, auto);
+    grid-template-areas:
+      "brand stats controls"
+      "daily daily save";
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 6px;
+    padding: 8px 12px;
+  }
+  .top-bar .brand { grid-area: brand; }
+  .top-bar .stats { grid-area: stats; gap: 4px 14px; min-width: 0; }
+  .top-bar .stat { min-width: 64px; }
+  .top-bar .controls {
+    grid-area: controls;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+  }
+  .top-bar .controls .btn { padding: 5px 9px; font-size: 12px; }
+  .top-bar .daily-activity { grid-area: daily; min-height: 26px; padding: 4px 10px; }
+  .top-bar .save-hint { grid-area: save; width: auto; flex-basis: auto; white-space: nowrap; }
+  body.packing .top-bar { row-gap: 0; }
   .main-layout {
-    flex: 1 1 auto;
-    min-height: min(720px, calc(100dvh - 160px));
+    flex: 1 1 0;
+    min-height: 0;
     overflow: visible;
+    gap: 10px;
+    grid-template-columns: minmax(236px, 290px) minmax(0, 1fr) minmax(236px, 290px);
+    grid-template-rows: auto minmax(110px, 1fr);
+    grid-template-areas:
+      "crate   grid info"
+      "staging grid info";
     align-items: stretch;
   }
+  /* Crate panel never clips (the open button must stay reachable); if the viewport is too short the
+   * page scrolls a little and JS keeps the grid inside the viewport. */
+  .crate-panel { grid-area: crate; overflow: visible; gap: 8px; min-height: max-content; }
+  .crate-tiers { gap: 6px; }
+  /* Two-line crate rows: [icon | name ······ fee] / [icon | desc] */
+  .crate-btn {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    column-gap: 8px;
+    padding: 7px 10px;
+  }
+  .crate-btn .crate-icon { font-size: 22px; }
+  .crate-btn .crate-name { grid-column: 2; grid-row: 1; }
+  .crate-btn .crate-fee { grid-column: 3; grid-row: 1; margin-top: 0; white-space: nowrap; }
+  .crate-btn .crate-desc { grid-column: 2 / 4; grid-row: 2; }
+  .fee-preview, .honeymoon-hint, .pity-hint { padding: 5px 8px; }
+  .staging-panel { grid-area: staging; min-height: 0; overflow: hidden; }
+  .grid-panel { grid-area: grid; min-width: 0; min-height: 0; overflow: hidden; }
+  .info-panel { grid-area: info; min-height: 0; overflow-y: auto; }
   .crate-panel,
+  .staging-panel,
   .grid-panel,
   .info-panel {
     max-height: none;
-    overflow: visible;
     display: flex;
     flex-direction: column;
   }
+  .info-panel,
   .staging-area {
-    flex: 0 1 auto;
-    min-height: 100px;
-    max-height: 280px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-bright) transparent;
+  }
+  .staging-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
     overflow-y: auto;
+    gap: 8px;
+    padding: 8px;
+  }
+  .staging-panel .item-card { width: calc((100% - 8px) / 2); max-width: 124px; }
+  .staging-area .empty-hint { padding: 6px 8px; line-height: 1.5; }
+
+  /* Centre: tools in one compact horizontal row above the grid */
+  .grid-panel { align-items: stretch; gap: 8px; }
+  .grid-panel .panel-header {
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .grid-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .grid-actions .btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    writing-mode: horizontal-tb;
   }
   .grid-wrap {
-    overflow: auto;
-    max-height: min(560px, calc(100dvh - 220px));
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+    max-width: none;
+    width: 100%;
+    overflow: hidden; /* never a scrollbar: JS fits --cell-size to this box */
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .info-panel {
-    overflow: visible;
+  .grid-wrap { background: transparent; border-color: transparent; padding: 4px; }
+  .warehouse-grid {
+    flex: 0 0 auto;
+    margin: auto;
+    border-color: var(--border-bright);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
   }
+  .warehouse-grid .cell { box-shadow: inset 0 0 0 1px rgba(61, 79, 69, 0.55); }
+  .grid-tips { flex: 0 0 auto; margin-top: 0; }
+
   .info-panel .round-log {
     max-height: 220px;
     overflow-y: auto;
   }
+
+  /* Packing: crate list collapses to a compact 3-up strip so 开箱暂存 gets the height */
+  body.packing .crate-panel { gap: 6px; padding: 10px; }
+  body.packing .crate-panel > .panel-header .hint-inline,
+  body.packing #btnOpenCrate,
+  body.packing .career-line,
+  body.packing .crate-btn .crate-desc,
+  body.packing .crate-btn .crate-fee {
+    display: none !important;
+  }
+  body.packing .crate-tiers {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  body.packing .crate-btn {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    justify-items: center;
+    text-align: center;
+    padding: 5px 4px;
+    row-gap: 2px;
+  }
+  body.packing .crate-btn .crate-icon { font-size: 18px; grid-row: auto; grid-column: auto; }
+  body.packing .crate-btn .crate-name { font-size: 12px; grid-row: auto; grid-column: auto; white-space: nowrap; }
+  body.packing .fee-preview { padding: 6px 8px; }
+  body.packing .limited-offer { display: none !important; }
+
   /* Immersion: while packing, collapse noisy chrome */
   body.packing .daily-activity,
   body.packing .save-hint,
@@ -3124,3 +3253,42 @@ body.wealth-gold .top-bar {
     display: none !important;
   }
 }
+
+/* Desktop narrow band: trim header chrome so the grid keeps its height */
+@media (min-width: 961px) and (max-width: 1200px) {
+  .subtitle { display: none; }
+  .brand h1 { font-size: 16px; }
+  .top-bar { grid-template-columns: auto minmax(300px, 1fr) minmax(0, auto); column-gap: 10px; }
+  .top-bar .controls { gap: 5px; }
+  .top-bar .controls .btn { padding: 4px 7px; }
+  .top-bar .stats { gap: 2px 10px; }
+  .top-bar .stat { min-width: 52px; }
+  .top-bar .stat-value { font-size: 15px; }
+  .top-bar .mute-label { display: none; }
+  .top-bar .size-toggle { font-size: 0; gap: 0; }
+  .top-bar .size-toggle select { font-size: 12px; }
+  .main-layout { grid-template-columns: 232px minmax(0, 1fr) 232px; }
+  .top-bar { grid-template-areas: "brand stats controls" "daily daily daily"; }
+  .top-bar .save-hint { display: none; }
+  .crate-btn .crate-fee { font-size: 10px; }
+  .crate-btn .crate-desc { font-size: 10px; }
+}
+
+/* ===== Ads gate — kept LAST in the file so it wins by source order too (tests/ads_off.test.js) ===== */
+/* Ads off (FEATURES.ADS_ENABLED=false → body.ads-off, default in index.html so no pre-JS flash):
+ * ad UI is removed from layout entirely — never shown greyed/disabled, never reserves space.
+ * #btnChallengeAdRetry is repurposed as the free daily retry when ads are off (no ad text) and
+ * #btnChallengeIapProtect is an IAP button, so both stay JS-controlled via [hidden]. */
+body.ads-off .ads-only,
+body.ads-off .ad-chip:not(#btnChallengeAdRetry):not(#btnChallengeIapProtect),
+body.ads-off [data-placement^="ad_"]:not(#btnChallengeAdRetry),
+body.ads-off #revealAdBar,
+body.ads-off #warehouseFullOffers,
+body.ads-off #adCapLine,
+body.ads-off #resultAdSlot,
+body.ads-off .bankrupt-ad-slot {
+  display: none !important;
+}
+/* display:flex/block on these beat the [hidden] attribute (the 「看广告立刻开箱？（已关闭）」 leak) */
+.reveal-ad-bar[hidden], .mono-row[hidden], .ad-cap-line[hidden],
+.result-ad-slot[hidden], .bankrupt-ad-slot[hidden] { display: none !important; }

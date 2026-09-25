@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>仓储拍卖 · 集装箱开箱</title>
-  <link rel="stylesheet" href="style.css?v=20260925d" />
+  <link rel="stylesheet" href="style.css?v=20260925e" />
 </head>
-<body>
+<body class="ads-off">
   <div id="app">
     <header class="top-bar">
       <div class="brand">
@@ -128,7 +128,7 @@
         <button type="button" id="btnOpenCrate" class="btn primary full" disabled>支付租金并开箱</button>
         <p class="career-line" id="careerLine">战绩 0 胜 / 0 负</p>
         <button type="button" id="btnAdFreeRent" class="btn ghost ad-chip" hidden data-placement="ad_free_rent">▶ 看广告 · 免费再租 1 次</button>
-        <p class="ad-cap-line" id="adCapLine" hidden></p>
+        <p class="ad-cap-line ads-only" id="adCapLine" hidden></p>
       </section>
 
       <section class="panel staging-panel" id="stagingPanel">
@@ -143,14 +143,14 @@
           </div>
         </div>
         <!-- Ads master: FEATURES.ADS_ENABLED=false in game.js hides all ad chips. Playtest: sequential-reveal ad disabled (rhythm). Bar kept hidden. -->
-        <div id="revealAdBar" class="reveal-ad-bar" hidden aria-hidden="true">
+        <div id="revealAdBar" class="reveal-ad-bar ads-only" hidden aria-hidden="true">
           <p>下一件看起来不错… 看广告立刻开箱？（已关闭）</p>
           <div class="reveal-ad-actions">
             <button type="button" id="btnAdRevealNext" class="btn accent" data-placement="ad_reveal_next" disabled>▶ 看广告开下一件（已关闭）</button>
             <button type="button" id="btnSkipRevealAd" class="btn ghost">跳过</button>
           </div>
         </div>
-        <div class="mono-row" id="warehouseFullOffers" hidden>
+        <div class="mono-row ads-only" id="warehouseFullOffers" hidden>
           <button type="button" id="btnAdTempSlots" class="btn ghost ad-chip inline" data-placement="ad_warehouse_temp">▶ 看广告临时+2格</button>
           <button type="button" id="btnAdKeepLoot" class="btn ghost ad-chip inline" data-placement="ad_keep_staging">▶ 看广告 · 本局不弃货</button>
         </div>
@@ -246,14 +246,14 @@
           <li><strong>完美装箱</strong>：仓库利用率 ≥85%，或本场零遗弃暂存货——结算额外奖励（装箱货值的 10%）并获得「下一柜折扣」券（下场租金 -12%，用一次）。</li>
           <li>现金不够付最便宜的柜子租金即<strong>破产</strong>。每日可「清算重整」一次（清空仓库/暂存，发放约 1.3× 普通柜租金再起）；当日已用尽则只能「新开档」。贵柜也可能开出一地鸡毛——亏本是常态的一部分。</li>
           <li><strong>贵货图鉴</strong>：基价达到门槛的高价值货物才会入典（密封租金比例门槛）。未获得显示剪影，获得后揭示。收录 5 / 10 / 20 件各领一次小奖励（再起资金或普通柜免费券）。</li>
-          <li><strong>开箱里程碑</strong>：累计开箱 5 / 10 / 20 / 35 / 50 / 75 / 100 次各领一次（开箱津贴、普通/精选免费券、钥匙碎片、限时豪华柜刷新）。自动发放，无广告翻倍。</li>
+          <li><strong>开箱里程碑</strong>：累计开箱 5 / 10 / 20 / 35 / 50 / 75 / 100 次各领一次（开箱津贴、普通/精选免费券、钥匙碎片、限时豪华柜刷新）。自动发放。</li>
           <li><strong>高级拍卖厅</strong>（隐藏）：峰值现金 ¥40,000 / ¥80,000 / ¥180,000 / ¥280,000 / ¥400,000 解锁青铜 / 翡翠 / 白银 / 铂金 / 赤金（中场约 30 万为主场）；金红权重 +3% / +4% / +4% / +4% / +4%，租金不加价。厅≥翡翠或峰值≥¥250,000 时现金与头像描金。顶栏可点芯片重看；远非稳赚。</li>
-          <li><strong>每日活动</strong>：按日期轮换主题（蓝货猎人 / 零弃货 / 限时尝鲜 / 绮梦寻踪 / 密封连开等；峰值约 20–40 万时额外中场主题），完成后抽一次超级大奖（约 12%）；奖励为券或小额现金，不出大红。中场限时刷新更密，不靠大幅掉率加成。试玩版无广告。</li>
+          <li><strong>每日活动</strong>：按日期轮换主题（蓝货猎人 / 零弃货 / 限时尝鲜 / 绮梦寻踪 / 密封连开等；峰值约 20–40 万时额外中场主题），完成后抽一次超级大奖（约 12%）；奖励为券或小额现金，不出大红。中场限时刷新更密，不靠大幅掉率加成。</li>
           <li><strong>热手 / 冷手</strong>：连续 3 场盈利触发「热手」短特效；连续 3 场亏本触发「冷手」软特效并提示手气回暖（软保底，不送大红）。连胜/连亏计入存档。</li>
           <li><strong>结算特效</strong>：默认「流畅」（仅盈亏音效+现金数字跳动，防卡顿）；顶栏可切「华丽」开启更长高光回放、金币粒子与稀有光环。</li>
           <li><strong>开箱音效 / 动画</strong>：工业撬锁与齿轮棘轮（Web Audio）；普通约 0.8 秒短促、精选约 1.2 秒、密封/限时约 2–2.5 秒仪式开箱（均可点击跳过）。拍卖厅叠加厅堂音色，赤金厅额外湿混响——越贵越有张力。</li>
           <li>进度<strong>自动保存在本机</strong>（现金、场次、账本、图鉴等）。「新开档」可清除存档重新开始。</li>
-          <li>「看广告」与「补给」为商业化占位：模拟激励视频/内购，不联网、无真实扣款。「一键整理」每日首次免费，之后可用 $0.99 或 1 把钥匙。试玩版默认<strong>关闭广告</strong>（FEATURES.ADS_ENABLED）。补给商店/钥匙仍可用。鉴宝失败可钥匙保级或接受降级。</li>
+          <li><span class="ads-only">「看广告」与</span>「补给」为商业化占位：<span class="ads-only">模拟激励视频/</span>内购，不联网、无真实扣款。「一键整理」每日首次免费，之后可用 $0.99 或 1 把钥匙。补给商店/钥匙仍可用。鉴宝失败可钥匙保级或接受降级。</li>
         </ol>
         <button type="button" id="btnCloseHelp" class="btn primary">知道了</button>
       </div>
@@ -272,7 +272,7 @@
         </div>
         <p class="result-meta" id="resultMeta"></p>
         <ul id="resultItems" class="result-items"></ul>
-        <div class="result-ad-slot" id="resultAdSlot" hidden>
+        <div class="result-ad-slot ads-only" id="resultAdSlot" hidden>
           <button type="button" id="btnAdSettleRefund" class="btn ghost ad-chip" data-placement="ad_settle_refund">▶ 看广告回本 30%–50%</button>
         </div>
         <div class="result-actions">
@@ -290,7 +290,7 @@
         <p class="result-score">当前现金 <strong id="bankruptCash">¥0</strong> · 累计盈亏 <strong id="bankruptPnL">¥0</strong></p>
         <p class="result-meta" id="bankruptRestructureHint" hidden>清算重整：清空仓库与暂存，发放约 1.3× 普通柜租金的再起资金（每日 1 次）。</p>
         <!-- Ads kept in DOM for FEATURES.ADS_ENABLED flip; playtest hides via .ad-chip -->
-        <div class="bankrupt-ad-slot">
+        <div class="bankrupt-ad-slot ads-only">
           <button type="button" id="btnAdBankruptRent" class="btn ghost ad-chip" data-placement="ad_free_rent">▶ 看广告 · 免费再租 1 次</button>
         </div>
         <div class="result-actions">
@@ -411,8 +411,8 @@
     </aside>
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script src="platform.js?v=20260925d"></script>
-  <script src="audio.js?v=20260925d"></script>
-  <script src="game.js?v=20260925d"></script>
+  <script src="platform.js?v=20260925e"></script>
+  <script src="audio.js?v=20260925e"></script>
+  <script src="game.js?v=20260925e"></script>
 </body>
 </html>

@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260925d";
+  const BUILD_VERSION = "20260925e";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -2355,7 +2355,7 @@
         { q: "房东收租金，租客付租金。谁付钱？", a: "租客", wrong: ["房东", "双方", "中介"] },
         { q: "开箱在装箱之前还是之后？", a: "之前", wrong: ["之后", "同时", "无所谓"] },
         { q: "密封柜通常比普通柜？", a: "更贵", wrong: ["更便宜", "一样", "免费"] },
-        { q: "若今日限时次数用完，还能钥匙刷新吗？（规则允许时）", a: "能", wrong: ["不能", "必须广告", "明天再说"] },
+        { q: "若今日限时次数用完，还能钥匙刷新吗？（规则允许时）", a: "能", wrong: ["不能", "必须付费", "明天再说"] },
       ];
       return packs[Math.floor(Math.random() * packs.length)];
     },
@@ -3016,15 +3016,49 @@
   }
 
 
-  /** Mobile: shrink --cell-size so the full N×N warehouse fits in .grid-wrap width (no clipped columns). */
+  /** Desktop layout (≥961px): the grid is the centre stage and is fitted to .grid-wrap (width AND height). */
+  const DESKTOP_CELL_MIN = 24;
+  const DESKTOP_CELL_MAX = 120;
+  function isDesktopLayout() {
+    return !!(window.matchMedia && window.matchMedia("(min-width: 961px)").matches);
+  }
+  function fixedCellPx(size) {
+    return size >= 8 ? "40px" : size >= 7 ? "44px" : size >= 6 ? "50px" : "56px";
+  }
+
+  /**
+   * Fit --cell-size so the full N×N warehouse fits in .grid-wrap with no clipped cells / scrollbars.
+   * Mobile (≤700px): width only. Desktop (≥961px): min(width, height) — .grid-wrap is flex:1 with
+   * min-height:0, so its box comes from the layout, not from the grid (no feedback loop).
+   * Tablet 701–960px keeps the fixed per-size cells. Hit-testing / drag ghost read cell rects from
+   * the DOM (cellFromPoint / measuredCellSize) and ghost cells use the same var, so they stay aligned.
+   */
   function fitCellSizeToWrap() {
     const mobile = window.matchMedia("(max-width: 700px)").matches;
     document.body.classList.toggle("is-mobile", mobile);
-    if (!mobile) return;
+    const desktop = !mobile && isDesktopLayout();
+    if (!mobile && !desktop) return;
     const wrap = el.gridWrap || document.querySelector(".grid-wrap");
     if (!wrap || !gridSize) return;
     const style = getComputedStyle(wrap);
     const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+    if (desktop) {
+      const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+      const availW = wrap.clientWidth - padX - 2; // 2 = grid border
+      let availH = wrap.clientHeight - padY - 2;
+      // Short viewports: side columns may push the page taller than the screen — keep the grid on-screen.
+      const top = wrap.getBoundingClientRect().top + (window.scrollY || 0);
+      const panel = wrap.closest(".panel");
+      const panelPadB = panel ? parseFloat(getComputedStyle(panel).paddingBottom) || 0 : 0;
+      const viewH = window.innerHeight - top - padY - panelPadB - 14;
+      if (viewH > 0) availH = Math.min(availH, viewH);
+      if (availW <= 0 || availH <= 0) return; // not laid out yet (hidden / jsdom)
+      const raw = Math.floor(Math.min(availW, availH) / gridSize);
+      const px = Math.max(DESKTOP_CELL_MIN, Math.min(DESKTOP_CELL_MAX, raw));
+      const cur = document.documentElement.style.getPropertyValue("--cell-size");
+      if (cur !== px + "px") document.documentElement.style.setProperty("--cell-size", px + "px");
+      return;
+    }
     const avail = Math.max(120, wrap.clientWidth - padX - 2);
     // leave 1px border budget; clamp so 5×5 stays usable and 8×8 still fits
     const raw = Math.floor(avail / gridSize);
@@ -3046,15 +3080,13 @@
       document.documentElement.style.setProperty("--cell-size", "24px");
     } else {
       document.documentElement.style.removeProperty("--cell-size"); // clear prior mobile fit
-      document.documentElement.style.setProperty(
-        "--cell-size",
-        size >= 8 ? "40px" : size >= 7 ? "44px" : size >= 6 ? "50px" : "56px"
-      );
+      document.documentElement.style.setProperty("--cell-size", fixedCellPx(size));
     }
     document.body.classList.toggle("is-mobile", mobile);
+    if (!mobile && isDesktopLayout()) fitCellSizeToWrap(); // synchronous: no flash of fixed cells
     renderGrid();
     updateStats();
-    if (mobile) {
+    if (mobile || isDesktopLayout()) {
       requestAnimationFrame(() => {
         fitCellSizeToWrap();
         renderGrid();
@@ -3400,7 +3432,7 @@
       const nsz = ni >= 0 && ni < GRID_SIZES.length - 1 ? GRID_SIZES[ni + 1] : null;
       el.btnExpand.title = !nsz
         ? "已达最大仓库"
-        : `扩容至 ${nsz}×${nsz}（现金 / 广告 / 补给）`;
+        : `扩容至 ${nsz}×${nsz}（${FEATURES.ADS_ENABLED ? "现金 / 广告 / 补给" : "现金 / 补给"}）`;
     }
     updateFeePreview();
     updateCrateButtons();
@@ -3951,6 +3983,8 @@
   
 
   function applyAdsMasterSwitch() {
+    // CSS gate: body.ads-off removes every ad placement from layout (see style.css).
+    if (document.body) document.body.classList.toggle("ads-off", !FEATURES.ADS_ENABLED);
     if (!FEATURES.ADS_ENABLED) {
       document.querySelectorAll(".ad-chip, .bankrupt-ad-slot, #revealAdBar, #adCapLine, #warehouseFullOffers, #resultAdSlot, .ad-chip").forEach((n) => {
         n.hidden = true;
@@ -5096,7 +5130,7 @@
     const rentBase = tierFee(tierId);
     const rent = effectiveTierFee(tierId);
     if (!useFree && cash < rent) {
-      setActionDesc(`现金不足，无法租下「${tier.name}」（需 ${formatYen(rent)}）。可看广告免费再租。`);
+      setActionDesc(`现金不足，无法租下「${tier.name}」（需 ${formatYen(rent)}）。${FEATURES.ADS_ENABLED ? "可看广告免费再租。" : "可换更便宜的柜子或用免费券。"}`);
       updateFeePreview();
       updateFreeRentOffer();
       return;
@@ -6577,7 +6611,7 @@
 
   function hideUpdateBanner() {
     const b = document.getElementById("updateBanner");
-    if (b) b.hidden = true;
+    if (b) { b.hidden = true; b.style.display = "none"; } // inline display:flex would beat [hidden]
   }
 
   function showUpdateBanner() {
@@ -6608,6 +6642,7 @@
       document.body.appendChild(b);
     }
     b.hidden = false;
+    b.style.display = "flex";
   }
 
   /** Fetch version.json (no-store, ≤ once / 60 s, silent on errors); prompt only between rounds. */
@@ -7093,7 +7128,8 @@
     wireAd(el.btnAdKeepLoot, AD_PLACEMENTS.KEEP_STAGING, grantKeepStaging);
     wireAd(el.btnAdSettleRefund, AD_PLACEMENTS.SETTLE_REFUND, grantSettleRefund);
 
-    // Ads master switch: hide all ad chips/bars when FEATURES.ADS_ENABLED=false
+    // Ads master switch: hide all ad chips/bars when FEATURES.ADS_ENABLED=false (+ body.ads-off CSS gate)
+    document.body.classList.toggle("ads-off", !FEATURES.ADS_ENABLED);
     if (!FEATURES.ADS_ENABLED) {
       document.querySelectorAll(".ad-chip, .bankrupt-ad-slot, #revealAdBar, #adCapLine, #warehouseFullOffers, #resultAdSlot").forEach((n) => {
         n.hidden = true;
@@ -7254,19 +7290,30 @@
         fitCellSizeToWrap();
         renderGrid();
       } else {
-        document.documentElement.style.setProperty(
-          "--cell-size",
-          gridSize >= 8 ? "40px" : gridSize >= 7 ? "44px" : gridSize >= 6 ? "50px" : "56px"
-        );
+        document.documentElement.style.setProperty("--cell-size", fixedCellPx(gridSize));
+        fitCellSizeToWrap(); // desktop: fit to .grid-wrap; tablet keeps fixed
         renderGrid();
       }
     };
     mqMobile.addEventListener("change", syncCellSizeOwner);
+    const mqDesktop = window.matchMedia("(min-width: 961px)");
+    if (mqDesktop.addEventListener) mqDesktop.addEventListener("change", syncCellSizeOwner);
     window.addEventListener("resize", () => {
-      if (mqMobile.matches) {
+      if (mqMobile.matches || mqDesktop.matches) {
         fitCellSizeToWrap();
       }
     }, { passive: true });
+    // Desktop: header wraps / packing chrome collapse change the wrap box without a window resize.
+    if (typeof ResizeObserver === "function") {
+      const wrapEl = el.gridWrap || document.querySelector(".grid-wrap");
+      if (wrapEl) {
+        let roRaf = 0;
+        new ResizeObserver(() => {
+          if (!mqDesktop.matches || roRaf) return;
+          roRaf = requestAnimationFrame(() => { roRaf = 0; fitCellSizeToWrap(); });
+        }).observe(wrapEl);
+      }
+    }
   }
 
   // ----- Init -----
@@ -7286,7 +7333,7 @@
     try { updateStats(); } catch (e) { console.warn("[boot] updateStats", e); }
     try { updateKeysUI(); } catch (e) { console.warn("[boot] updateKeysUI", e); }
     setActionDesc(
-      `欢迎来到仓储拍卖场。启动资金 ${formatYen(STARTING_CASH)}（约 3–4 次普通柜）。默认仓库 ${DEFAULT_GRID}×${DEFAULT_GRID}，装箱极紧。补给/广告为占位。`
+      `欢迎来到仓储拍卖场。启动资金 ${formatYen(STARTING_CASH)}（约 3–4 次普通柜）。默认仓库 ${DEFAULT_GRID}×${DEFAULT_GRID}，装箱极紧。${FEATURES.ADS_ENABLED ? "补给/广告为占位。" : "补给为占位。"}`
     );
     addLog(`入场 · 启动资金 <strong>${formatYen(STARTING_CASH)}</strong> · 仓库 ${DEFAULT_GRID}×${DEFAULT_GRID}`);
   } else {
