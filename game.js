@@ -31,6 +31,8 @@
   // Economy (econ-retune, 游戏商业化 targets; value ÷ rent, packing loss + 70% 鉴宝 included, post-honeymoon):
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
+  /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
+  const BUILD_VERSION = "20260925d";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -5087,6 +5089,7 @@
     // selectedTier after this point.
     const tierId = selectedTier;
     const tier = CRATE_TIERS[tierId];
+    hideUpdateBanner(); // never show the update prompt during an open / reveal
     // Free tokens: common / rare dedicated, or legacy freeRent — never luxury limited
     const freeKind = freeTokenForTier(tierId);
     const useFree = !!freeKind;
@@ -6235,6 +6238,8 @@
         updateStats();
         updateWarehouseFullOffers();
         scheduleSave();
+        // After the (80 ms debounced) save lands: quiet check for a newer release.
+        setTimeout(() => checkForUpdate("settle"), 150);
       };
 
       // Frame 2+: heavy list / stats / streak after modal is visible
@@ -6559,6 +6564,76 @@
       }
     } catch (_) { /* quota / private mode */ }
   }
+
+  // ----- Release check (version.json) — non-blocking, never auto-reloads, save format untouched -----
+  const VERSION_CHECK_MIN_MS = 60000;
+  let lastVersionCheckAt = 0;
+  let pendingUpdateVersion = null; // newer release seen but not shown yet (e.g. round started meanwhile)
+
+  /** True only between rounds: nothing opened, or the opened crate is already settled. */
+  function roundIdleForUpdate() {
+    return !revealing && !settleReplayActive && (!crateOpenedThisRound || extractedThisRound);
+  }
+
+  function hideUpdateBanner() {
+    const b = document.getElementById("updateBanner");
+    if (b) b.hidden = true;
+  }
+
+  function showUpdateBanner() {
+    if (!roundIdleForUpdate()) return;
+    let b = document.getElementById("updateBanner");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "updateBanner";
+      b.setAttribute("role", "status");
+      b.style.cssText =
+        "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;display:flex;gap:10px;" +
+        "align-items:center;padding:8px 12px;border-radius:10px;background:rgba(20,24,28,0.92);color:#fff;" +
+        "box-shadow:0 4px 16px rgba(0,0,0,0.35);font-size:14px;";
+      const msg = document.createElement("span");
+      msg.textContent = "有更新，刷新后继续";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "btnUpdateReload";
+      btn.className = "btn";
+      btn.textContent = "刷新";
+      btn.addEventListener("click", () => {
+        if (!roundIdleForUpdate()) { showToast("本场结束后再刷新"); return; }
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        saveGame(); // save first, then reload
+        location.reload();
+      });
+      b.append(msg, btn);
+      document.body.appendChild(b);
+    }
+    b.hidden = false;
+  }
+
+  /** Fetch version.json (no-store, ≤ once / 60 s, silent on errors); prompt only between rounds. */
+  function checkForUpdate(reason) {
+    if (!roundIdleForUpdate()) return;
+    if (pendingUpdateVersion) { showUpdateBanner(); return; }
+    const now = Date.now();
+    if (now - lastVersionCheckAt < VERSION_CHECK_MIN_MS) return;
+    if (typeof fetch !== "function") return;
+    lastVersionCheckAt = now;
+    try {
+      fetch(`version.json?t=${now}`, { cache: "no-store" })
+        .then((r) => (r && r.ok ? r.json() : null))
+        .then((data) => {
+          const remote = data && typeof data.version === "string" ? data.version.trim() : "";
+          if (!remote || remote === BUILD_VERSION) return;
+          pendingUpdateVersion = remote;
+          showUpdateBanner(); // no-op if a round started meanwhile; shown after next settle
+        })
+        .catch(() => { /* offline / 404 — ignore */ });
+    } catch (_) { /* ignore */ }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate("visible");
+  });
 
   function clearSave() {
     try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* ignore */ }
