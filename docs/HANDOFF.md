@@ -354,8 +354,8 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑫ 试玩日志（测试玩家 · 每 ~25 分钟）
 
-> 最近更新：2026-09-25 13:56 Asia/Shanghai · 负责人：游戏测试玩家  
-> 截图：`docs/playtest-shots/line1-retest2/`、`docs/playtest-shots/line-followball/`、`docs/playtest-shots/line3-narrow/`（含 `v2-*.png`）、`docs/playtest-shots/line2-mid/`、`docs/playtest-shots/line2-verify-0925/`、`docs/playtest-shots/line2-tight-bc4f/`、`docs/playtest-shots/line2-tight-online/`、`docs/playtest-shots/line4-tiers/`、`docs/playtest-shots/line5-fx/`、`docs/playtest-shots/line6-limited-fix/`
+> 最近更新：2026-09-25 14:20 Asia/Shanghai · 负责人：游戏测试玩家  
+> 截图：`docs/playtest-shots/line1-retest2/`、`docs/playtest-shots/line-followball/`、`docs/playtest-shots/line3-narrow/`（含 `v2-*.png`）、`docs/playtest-shots/line2-mid/`、`docs/playtest-shots/line2-verify-0925/`、`docs/playtest-shots/line2-tight-bc4f/`、`docs/playtest-shots/line2-tight-online/`、`docs/playtest-shots/line4-tiers/`、`docs/playtest-shots/line5-fx/`、`docs/playtest-shots/line6-limited-fix/`（含 `08-console-v-c.png`）
 
 ### 已测线路
 | 线路 | 状态 | 备注 |
@@ -370,19 +370,19 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | 「空间紧张」bc4f 本地补踩（line2-tight-bc4f） | ⚠️ 作废 | 本地旧 `game.js` 缓存；以线上为准 |
 | 「空间紧张」线上 Pages 复踩（line2-tight-online） | ✅ 通过 | ≥约 15 格弹、较小不弹；`aee6a72` 版本号防缓存 |
 | 结算华丽 vs 流畅（line5-fx） | ✅ 本轮已推 | 流畅≈0.2s 无回放；华丽≈1.8s 有高光回放、无卡顿、刷新后记住模式；建议保留流畅默认 |
-| 限时空柜复验（line6-limited-fix · `?v=20260925b`） | ⚠️ 硬 bug 仍在 | 普通时机限时出 7 件✅；华丽跳过点屏/Esc✅；**第20次里程碑开限时扣≈¥58,100 仍 0 件且未退租**✗；已停手保留第35次里程碑（存档第24场），等 `?v=20260925c` |
-| 冲资金 ~30 万 | ⏳ 未到 | 现约 ¥13.5万；未冲到赤金门槛 |
+| 限时空柜复验（line6-limited-fix · b→c 已确认 / d 待踩） | 🔄 待复测 | b 上第20次里程碑空箱未退租✗已证；**14:13 Console 确认 Pages 曾跑 `?v=20260925c`**（`08-console-v-c.png`）；保留档场次24·现金¥168,397·白银厅·下一柜−12%，但「今日限时次数已用完」；里程碑35/20 空柜复测**尚未开踩**；现线上已是 `?v=20260925d`，按⑩改在 d 强刷复测 |
+| 冲资金 ~30 万 | ⏳ 未到 | 保留档约 ¥16.8万；未冲到赤金门槛 |
 
 ### 评测 6 问进度
-1–3 可写：开局/装箱顺；窄屏已翻；柜差租金台阶与「密封起开始赌」体感已立（line4-tiers）。4 贵货：强制路径已摸到，自然触发仍弱。5 华丽已比完（line5-fx：流畅默认、华丽可跳过）。6 冲资金未到（现约 ¥13.5万，目标 ~30万）。
+1–3 可写：开局/装箱顺；窄屏已翻；柜差租金台阶与「密封起开始赌」体感已立（line4-tiers）。4 贵货：强制路径已摸到，自然触发仍弱。5 华丽已比完（line5-fx：流畅默认、华丽可跳过）。6 冲资金未到（保留档约 ¥16.8万，目标 ~30万）。
 
 ### 新 bug / 体验点
 1. ~~窄屏装箱：暂存区隐藏 / 货品不显示~~ → **v2 已过**。
 2. **评测 UI 形态**（降级）：可再开已验；叠层是否算「底栏 sheet」待产品确认。
 3. ~~**「空间紧张」写死误报 + 高货量门控**~~ → ✅ 线上整条收（`line2-tight-online/`）。
 4. **蜜月后现金门槛**（仍开）：无评测加钱时密封/跟随球难自然出现。
-5. **限时豪华柜里程碑空箱（上线阻塞）**：白银厅限时付 ¥66,000 / 0 件（`line4-tiers/05-worst.png`）；`?v=20260925b` 复验第20次里程碑（钥匙碎片+折扣路径）付≈¥58,100 仍 0 件、结算扣满租未退（`line6-limited-fix/bug-milestone-no-loot-no-refund.png` + `00-round20-log.png` + `05-console-version.png`）。grok 认定真 bug（非缓存）；商业化要求结算 0 件全额退租兜底 + 全柜型×里程碑×折扣自动测试，通过后发 `?v=20260925c`。试玩侧：保留第35次里程碑存档，v=c 上线后测 35 次限时（有无折扣）并清档复测第20次。
-6. **结算面板旧行残留**（次要）：`bug-stale-settle-lines.png` 仍见 CSS 已修的空行，疑标签页旧缓存；v=c 强刷时顺带确认。
+5. **限时豪华柜里程碑空箱（仍待复测）**：白银厅限时付 ¥66,000 / 0 件（`line4-tiers/05-worst.png`）；`?v=20260925b` 复验第20次里程碑（钥匙碎片+折扣路径）付≈¥58,100 仍 0 件、结算扣满租未退（`line6-limited-fix/bug-milestone-no-loot-no-refund.png` + `00-round20-log.png` + `05-console-version.png`）。`6d72e10` / `?v=20260925c` 已上退租兜底+自动测试；**14:13 已截 Console 确认 c 戳**（`08-console-v-c.png`），但第35次里程碑限时复测未开踩（保留档「今日限时次数已用完」）。现 Pages 已是 `?v=20260925d`（econ-retune），按⑩在 **d 强刷**后测 35 次限时（有无折扣）并清档复测第20次；若当日限时用尽需跨日或评测手段重置次数。
+6. **结算面板旧行残留**（次要）：`bug-stale-settle-lines.png` 仍见 CSS 已修的空行，疑标签页旧缓存；d 强刷时顺带确认。
 7. 开箱灰 / 中盘结算链路本轮 **无新阻塞**。
 
 ### 验收状态建议（给商业化对照 ⑪）
@@ -396,8 +396,9 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | 评测 UI（底栏 sheet） | 建议 🔄→偏 ✅ |
 | 柜差体感（普通→精选→密封→限时） | **建议 ✅**（line4-tiers；⑩「测试请验」1 可勾） |
 | 华丽结算对比 | **建议 ✅**（line5-fx；流畅默认 + 华丽可跳过已验；⑩「测试请验」2 可勾） |
-| 限时空柜空箱 / 退租兜底 | **❌ 上线阻塞**；等 `?v=20260925c` 后按里程碑 20/35 × 折扣复测；⑩「测试请验」3 未过 |
-| 中盘经济体感 | 🔄 样本续积；暂无阻塞，继续冲赤金 |
+| 限时空柜空箱 / 退租兜底 | **🔄 修复已上（c→d）待真机复测**；c 戳已确认，里程碑 20/35 × 折扣尚未开踩；改在 `?v=20260925d` 强刷验收 |
+| 中盘经济体感 | 🔄 样本续积；d 经济重调后需新样本；继续冲赤金 |
+| 经济重调 / 蜜月价（d） | ⏳ 未踩；⑩要求核对普通蜜月租¥3,150、精选¥11,050、厅详情无租金上浮 |
 
 ### 试玩日志
 - **2026-09-23 03:06** · line1-retest2：蜜月约 3/5，现金 ¥20,924，盈亏 +¥8,524；开箱装箱结算正常；占用 28% 仍「空间紧张」。
@@ -412,3 +413,4 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 - **2026-09-25 13:05–13:15** · line4-tiers：柜差线上入档——普通完美装箱 +¥13,354（租¥2,950）/ 精选 +¥4,574（租¥12,750）/ 密封 −¥3,287（租¥33,000）/ 密封高光 +¥30,803（租¥28,500·含炎金）/ **限时最差 −¥66,000（货¥0，`05-worst.png`，「已补发垫底货」未生效）**。普通均租≈¥4,037 / 均净 +¥5,544（去保护场比值≈1.23≈模拟1.24）；精选均租≈¥12,983 / 均净 +¥1,161（比值≈1.03 vs 模拟1.48）；密封均租≈¥31,300 / 均净 +¥19,859（比值≈1.63 vs 模拟2.24，每场弃1件）。租金台阶体感清晰。截图 `line4-tiers/`。
 - **2026-09-25 13:15–13:21** · line5-fx：华丽 vs 流畅线上踩完——流畅≈0.2s 无回放；华丽≈1.8s 有高光回放、无卡顿、刷新后记住模式；当时无明显跳过（后续 `13942c8` / v=b 已加任意处/Esc 跳过）。建议保留流畅默认。精选 3 场全赚（+31,403 / +11,661 / +6,231），累计精选 6 场赢 5。截图 `line5-fx/`。
 - **2026-09-25 13:44–13:53** · line6-limited-fix（`?v=20260925b`）：普通时机限时出 7 件含炎金✅（`03-normal-limited.png`）；华丽跳过点屏/Esc✅（`04-fancy-skip.png`）；**第20次里程碑开限时扣≈¥58,100 仍 0 件、结算未退租**✗（`01-milestone-open` / `02-milestone-settle` / `bug-milestone-no-loot-no-refund` / `00-round20-log` / `05-console-version`）。grok 认定真 bug（里程碑钥匙碎片+折扣路径），商业化标上线阻塞，要求 0 件全额退租 + 自动测试后发 `?v=20260925c`。试玩已停手保留第35次里程碑（存档第24场）；现金约 ¥13.5万。6 问约 1–3 可写、5 已比完、4 自然仍弱、6 冲资金未到。
+- **2026-09-25 14:13–14:20** · line6 发版确认（未开复测）：Pages Console 确认 `platform.js` / `style.css` 曾带 `?v=20260925c`（`08-console-v-c.png`）；保留档场次24、现金¥168,397、白银厅、碎片1/3、下一柜−12%，限时豪华柜显示「今日限时次数已用完」——第35次里程碑限时**尚未开踩**。同期 grok 已将经济重调推上 `?v=20260925d`（⑩ 14:20）；试玩改在 **d 强刷**后做空柜/退租复测，并顺带核对蜜月租¥3,150与厅无租金上浮。6 问仍约 1–3 可写、5 已比完、4 自然仍弱、6 未到。
