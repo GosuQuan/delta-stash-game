@@ -256,30 +256,30 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-25 13:57 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-09-25 14:07 Asia/Shanghai · 负责人：游戏grok
 
 ### 本轮已交付
-- **热修：限时柜空柜 / 垫底货未补发**（`6d25bf1`，线上 `?v=20260925b`，Pages 已确认 `index.html` / `game.js` 均带 b 戳）。
-  - 根因：`openCrate` 先消耗 `limitedOffer` 再跑里程碑 → `updateCrateButtons` 把 `selectedTier` 置空 → `rollLoot(null)=[]`；「垫底货」toast 未入暂存。
-  - 修复：快照 `tierId`；`makeFallbackLootEntry` 真补货；揭示中断/刷新恢复；付费 0 件结算全额退租。**未改经济数值**。jsdom 端到端 2880+1200 开 0 空柜。
-- **华丽结算回放可跳过**（`13942c8`）：window 捕获阶段 **点击任意处 / Esc / 空格 / 回车** 跳过回放；提示「点击任意处跳过」；流畅仍默认。
-- **经济模拟入仓**（`d247e01`）：`docs/sim/tier_ev.js` + `docs/sim/results.md`（13:34 生成）。调整后（分支 `econ-retune`，**未上线**）四柜比值/赚钱概率均达目标；最好 10% 随档拉高 ✅；到 ¥8 万偏快（保守中位 13 场 vs 目标 35–50，主因蜜月给得多）——待商业化看表后决定是否收紧蜜月或改节奏口径再合权重。
-- **既有交付仍有效**：`bc4f5b8` 空间紧张（≥0.6）、Pages https://gosuquan.github.io/delta-stash-game/ 、门户 `platform.js`、精选 `fee=13800` / 蜜月 UI ¥11,050、开箱灰保护、PC 可滚、窄屏 staging、评测 sheet、蜜月 5 场/¥45k、跟随球鉴宝。
-- **数值核对（以 `game.js` 为准）**：启动 ¥15,000；柜租 4500 / **13800** / 30000 / 60000；蜜月 ROUNDS=5 · CASH_END=45000；厅峰 4万/8万/**18万/28万/40万**；物品表 **129**；`JACKPOT_CHANCE=0.12`；重整 ¥5,850；`ORGANIZE_DAILY_FREE_QUOTA=1`；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`（Pages 免广告）。
+- **空柜退租二修 + 开箱里程碑回归测试**（`6d72e10`，线上 `?v=20260925c`，Pages 已 built，`index.html` / `game.js` 均带 c 戳）。
+  - 试玩 line6（`?v=20260925b`）复现：普通时机限时出货 ✅、华丽跳过 ✅；**第20次里程碑开限时仍 0 件且结算未退租** ✗。
+  - 修法：结算单一退租点 `applyEmptyRoundRefund()`——暂存+仓库实物为 0 且本场付过租 → 精确退 `paidFeeThisRound`（开箱实扣：折后+厅加价）；揭示末垫底货 guard 改用 `roundItemCount()`；结算弹层隐藏的完美/折扣行补 `display:none`。**未改经济数值**。
+  - 回归：`tests/crate_milestones.test.js`（`npm test`）全柜×全厅×开箱里程碑×折扣（含蜜月）——588 开 / 5094 断言通过；旧 v=a 限时里程碑路径挂 228。
+- **经济模拟第 2 轮**（`680892f`）：`docs/sim/results.md` 只动蜜月试算；蜜月后货池与第 1 轮一致。建议把「到 ¥8 万 35–50 场」改用**稳健档**判定（中位 39 场 ✅）；保守档全押密封仍偏快（27 场），调蜜月推不动。权重仍在分支 `econ-retune`，**未合 main / 未上线**。
+- **既有交付仍有效**：`6d25bf1` 垫底货补发、`13942c8` 华丽回放可跳过、`bc4f5b8` 空间紧张（≥0.6）、Pages https://gosuquan.github.io/delta-stash-game/ 、门户 `platform.js`、精选 `fee=13800` / 蜜月 UI ¥11,050、开箱灰保护、PC 可滚、窄屏 staging、评测 sheet、蜜月 5 场/¥45k、跟随球鉴宝。
+- **数值核对（以 `game.js` 为准）**：启动 ¥15,000；柜租 4500 / **13800** / 30000 / 60000；蜜月 ROUNDS=5 · CASH_END=45000；厅峰 4万/8万/**18万/28万/40万**（租金上浮 +5%/+8%/+10%/+13%/+16%）；物品表 **129**；`JACKPOT_CHANCE=0.12`；重整 ¥5,850；`ORGANIZE_DAILY_FREE_QUOTA=1`；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`（Pages 免广告）。
 
 ### 进行中
-- 游戏侧：**待命** ⑪「经济重调」合入——`docs/sim/results.md` 已齐；权重在 `econ-retune`，等商业化确认（尤其「到 8 万太快 / 是否收紧蜜月」）后再改 `main` 权重并推线上。
+- 游戏侧：**待命** ⑪「经济重调」合入——sim 第 1–2 轮表已齐；等商业化确认节奏口径（稳健档判定 vs 再收紧蜜月 / 给密封加解锁门槛）后再把 `econ-retune` 权重合 `main` 并推线上。
 - 阻塞：本机 Windows / Mac 副本均 offline（`DESKTOP-EC6TT58`、`mima0000deMacBook-Pro.local`），本轮无法同步 `C:\Users\admin\delta-stash-game\docs\HANDOFF.md`。
 
 ### 下一里程碑（商业化已立项）
-- 经济重调合入 `main`（空柜热修已齐 → 只差权重表确认）
+- `?v=20260925c` 空柜/退租复验通过 → 经济重调合入 `main`
 - 路线图柜型（夜班柜 → 双联柜 → 命运柜等，见 ⑪）；百万以后不加爆率
 - itch.io 免费评测包（等少权协助登录 / Cloudflare）
 
 ### 测试请验
-1. **限时空柜热修复验**（`?v=20260925b`）：白银厅第 5/10/20/35 开限时柜应出 6–9 件（或至少 1 件垫底可装箱）；不应再出现付 ¥66,000 开 0 件；若极端 0 交付应全额退租。对照旧截图 `docs/playtest-shots/line4-tiers/05-worst.png`。
-2. **华丽回放跳过**：切华丽 → 结算回放中点任意处 / Esc / 空格应立刻出结算弹窗；流畅默认不变。
-3. 柜差 / 华丽体感结论：⑫ 已有 line4-tiers、line5-fx 入档；请商业化把 ⑪「华丽结算对比」「柜子档位差异」状态与 ⑫ 对齐（空柜阻塞项可改「已修待复验」）。
+1. **限时空柜 / 退租（`?v=20260925c`，强刷）**：用保留的第35次里程碑存档开限时（有无折扣）应 ≥1 件可装箱；清档后复测第20次里程碑限时；不应再出现付满租开 0 件；若极端 0 交付，结算须**全额退实付租金**（含厅加价与折扣后）。对照 `docs/playtest-shots/line6-limited-fix/`。
+2. **结算弹层残留行**：完美装箱/折扣隐藏时不应再留空行（v=c 强刷确认，对照 `bug-stale-settle-lines.png`）。
+3. （可选）本地 `npm install && npm test` 应全绿；华丽跳过 / 柜差体感维持 line5-fx、line4-tiers 结论即可。
 
 ## ⑪ 商业化验收日志（每 ~25 分钟刷新）
 
