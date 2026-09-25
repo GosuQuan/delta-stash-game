@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>仓储拍卖 · 集装箱开箱</title>
-  <link rel="stylesheet" href="style.css?v=20260925f" />
+  <link rel="stylesheet" href="style.css?v=20260925g" />
 </head>
-<body class="ads-off">
+<body class="ads-off iap-off">
   <div id="app">
     <header class="top-bar">
       <div class="brand">
@@ -39,7 +39,7 @@
         </div>
       </div>
       <div class="controls">
-        <span class="keys-chip" id="keysChip" title="钥匙（内购占位货币）">🔑 ×0</span>
+        <span class="keys-chip" id="keysChip" title="钥匙（开箱里程碑碎片合成）">🔑 ×0</span>
         <span class="hall-chip-top" id="hallChip" hidden title="高级拍卖厅（点击查看）" role="button" tabindex="0">青铜拍卖厅</span>
         <span class="hall-unlock-hint" id="hallUnlockHint" hidden></span>
         <button type="button" class="daily-best-chip" id="dailyBestChip" hidden title="今日最佳开箱">今日最佳</button>
@@ -54,7 +54,7 @@
           </select>
         </label>
         <button type="button" id="btnCodex" class="btn ghost codex-btn" title="贵货图鉴">图鉴</button>
-        <button type="button" id="btnShop" class="btn ghost shop-btn" title="补给商店（内购占位）">补给</button>
+        <button type="button" id="btnShop" class="btn ghost shop-btn iap-only" title="补给商店" hidden>补给</button>
         <button type="button" id="btnFxMode" class="btn ghost fx-mode-btn" title="结算特效：流畅（默认）/ 华丽" aria-pressed="false" aria-label="结算特效">
           <span class="fx-mode-label" id="fxModeLabel">流畅</span>
         </button>
@@ -162,7 +162,7 @@
           <div class="grid-actions">
             <button type="button" id="btnRotate" class="btn ghost" title="旋转">↻ 旋转</button>
             <button type="button" id="btnSpeedOrganize" class="btn ghost inline" title="一键整理（今日免费 1 次）">⚡ 整理 今日免费</button>
-            <button type="button" id="btnExpand" class="btn ghost expand-btn" title="扩容仓库（补给内购 / Shift+现金）">⬆ 扩容</button>
+            <button type="button" id="btnExpand" class="btn ghost expand-btn" title="扩容仓库（现金）">⬆ 扩容</button>
             <button type="button" id="btnClearGrid" class="btn ghost danger-text" title="清空仓库">清空</button>
           </div>
         </div>
@@ -240,7 +240,7 @@
         <ol>
           <li>你有一笔启动资金。每场向房东支付<strong>租金</strong>租下一间仓储柜（普通 / 精选 / 密封）。现金较高时可能刷出<strong>限时豪华柜</strong>（倒计时内可租，错过后消失）。</li>
           <li>开箱后随机掉落货物。品级：<strong style="color:#ff2a2a">大红·神话</strong> &gt; <strong style="color:#e85a5a">小红·传说</strong> &gt; <strong style="color:#ff8c2a">炎金·至臻</strong> &gt; <strong style="color:#f5c518">大金·金耀</strong> &gt; <strong style="color:#d4a84b">小金·鎏金</strong> &gt; <strong style="color:#f472b6">粉·绮梦</strong> &gt; <strong style="color:#b46dff">紫·史诗</strong> &gt; <strong style="color:#4aa3e0">蓝·精品</strong> &gt; <strong style="color:#4ecf88">绿·良品</strong> &gt; 白·凡品。货池<strong>硬切割</strong>：普通偏友好外形、几乎不出金红；精选偶见小金；密封/限时金红目标更高、异形更多——仍可能亏本。装箱可全程手动，整理仅为便利。</li>
-          <li>把货物拖进<strong>转运仓库</strong>网格（默认 <strong>5×5</strong>，几乎每场都要弃货）；装不下的结算时遗弃。「扩容」/「补给」可 5→6→7→8（内购占位 / 现金）。</li>
+          <li>把货物拖进<strong>转运仓库</strong>网格（默认 <strong>5×5</strong>，几乎每场都要弃货）；装不下的结算时遗弃。「扩容」<span class="iap-only">/「补给」</span>可 5→6→7→8（现金<span class="iap-only"> / 补给</span>）。</li>
           <li><kbd>R</kbd> 旋转 · <kbd>Esc</kbd> 取消 · 双击仓库物品取回暂存。</li>
           <li>「转卖结算」：售出已装箱货物，减去本场租金，显示<strong>净利润/亏损</strong>。现金跨场累计。</li>
           <li><strong>完美装箱</strong>：仓库利用率 ≥85%，或本场零遗弃暂存货——结算额外奖励（装箱货值的 10%）并获得「下一柜折扣」券（下场租金 -12%，用一次）。</li>
@@ -253,7 +253,7 @@
           <li><strong>结算特效</strong>：默认「流畅」（仅盈亏音效+现金数字跳动，防卡顿）；顶栏可切「华丽」开启更长高光回放、金币粒子与稀有光环。</li>
           <li><strong>开箱音效 / 动画</strong>：工业撬锁与齿轮棘轮（Web Audio）；普通约 0.8 秒短促、精选约 1.2 秒、密封/限时约 2–2.5 秒仪式开箱（均可点击跳过）。拍卖厅叠加厅堂音色，赤金厅额外湿混响——越贵越有张力。</li>
           <li>进度<strong>自动保存在本机</strong>（现金、场次、账本、图鉴等）。「新开档」可清除存档重新开始。</li>
-          <li><span class="ads-only">「看广告」与</span>「补给」为商业化占位：<span class="ads-only">模拟激励视频/</span>内购，不联网、无真实扣款。「一键整理」每日首次免费，之后可用 $0.99 或 1 把钥匙。补给商店/钥匙仍可用。鉴宝失败可钥匙保级或接受降级。</li>
+          <li><span class="iap-only"><span class="ads-only">「看广告」与</span>「补给」为商业化占位：<span class="ads-only">模拟激励视频/</span>内购，不联网、无真实扣款。</span>「一键整理」每日首次免费，之后可花 1 把钥匙（没有钥匙就明日再来）<span class="iap-only">，或在补给永久解锁</span>。钥匙由开箱里程碑碎片合成。鉴宝失败可钥匙保级或接受降级。</li>
         </ol>
         <button type="button" id="btnCloseHelp" class="btn primary">知道了</button>
       </div>
@@ -304,7 +304,7 @@
     <div id="shopModal" class="modal" hidden>
       <div class="modal-card">
         <h2>补给商店</h2>
-        <p class="shop-meta">内购占位（playtest 锁定价）。点击后弹出确认，不会产生真实扣款。钥匙：刷新限时柜 / 贵货保级各 1。</p>
+        <p class="shop-meta iap-only">内购占位（playtest 锁定价）。点击后弹出确认，不会产生真实扣款。钥匙：刷新限时柜 / 贵货保级各 1。</p>
         <div class="shop-grid" id="shopGrid"></div>
         <button type="button" id="btnCloseShop" class="btn primary">关闭</button>
       </div>
@@ -345,7 +345,7 @@
         <div class="challenge-fail-actions" id="challengeFailActions" hidden>
           <button type="button" id="btnChallengeAdRetry" class="btn accent ad-chip" data-placement="ad_challenge_retry">▶ 看广告重试一次</button>
           <button type="button" id="btnChallengeKeyProtect" class="btn ghost">🔑 花1钥匙保级不降</button>
-          <button type="button" id="btnChallengeIapProtect" class="btn ghost ad-chip" data-placement="iap_protect_once">$1.99 单次贵货保级</button>
+          <button type="button" id="btnChallengeIapProtect" class="btn ghost ad-chip" data-placement="iap_protect_once" hidden>单次贵货保级</button>
           <button type="button" id="btnChallengeAcceptFail" class="btn ghost danger-text">接受降级</button>
         </div>
       </div>
@@ -411,8 +411,8 @@
     </aside>
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script src="platform.js?v=20260925f"></script>
-  <script src="audio.js?v=20260925f"></script>
-  <script src="game.js?v=20260925f"></script>
+  <script src="platform.js?v=20260925g"></script>
+  <script src="audio.js?v=20260925g"></script>
+  <script src="game.js?v=20260925g"></script>
 </body>
 </html>

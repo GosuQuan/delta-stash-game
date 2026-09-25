@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260925f";
+  const BUILD_VERSION = "20260925g";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -361,6 +361,10 @@
     CHALLENGE_ENABLED: true,  // keep quiz; ad-retry hidden when ads off
     // The local build keeps stubs for testing; portal builds never expose fake purchases.
     IAP_SHOP_ENABLED: !platform || platform.provider() === "local",
+    // Real-money purchases need a payment platform. Free trial / Pages / local builds have none, so NO
+    // real-money price ($ / USD / x.99) is ever shown: price labels stay in IAP_SKUS / ORGANIZE_IAP_PRICE
+    // and only render when a platform exposes supportsPayments() (then in its own currency).
+    IAP_ENABLED: !!(platform && typeof platform.supportsPayments === "function" && platform.supportsPayments()),
     KEYS_ENABLED: true,       // key sinks still usable
     ORGANIZE_STUB_ENABLED: !platform || platform.provider() === "local",
   };
@@ -784,6 +788,8 @@
     startX: 0,
     startY: 0,
     pending: null, // { uid, from, pointerId, startX, startY } — touch-friendly delay
+    touch: false,  // touch/pen drag → ghost lifted above the finger (mouse: unchanged)
+    ghostPt: null, // centre of the lifted ghost (touch) — used for the staging drop test
   };
 
   const $ = (s) => document.querySelector(s);
@@ -2616,7 +2622,7 @@
           return;
         }
         const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
-        if (!sku) return;
+        if (!sku || !FEATURES.IAP_ENABLED) return; // free trial: no real-money purchase
         showConfirm(
           "确认补给（测试）",
           `购买「${sku.name}」· ${sku.price}\n（占位：不会真实扣款）`,
@@ -2718,9 +2724,11 @@
           const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
           const canUseCharge = protectCharges > 0;
           el.btnChallengeIapProtect.disabled = false;
+          // Item-based (保级券) always; real-money purchase only with a payment platform
+          el.btnChallengeIapProtect.hidden = !(canUseCharge || (FEATURES.IAP_ENABLED && sku));
           el.btnChallengeIapProtect.textContent = canUseCharge
             ? `使用保级券 ×${protectCharges}`
-            : `＄${(sku && sku.price) || "$1.99"} 单次贵货保级`;
+            : `${(sku && sku.price) || ""} 单次贵货保级`.trim();
         }
         const grace = FEATURES.ADS_ENABLED ? 10000 : 4000;
         if (failGraceId) clearTimeout(failGraceId);
@@ -2858,7 +2866,7 @@
         if (el.challengeChoices) el.challengeChoices.hidden = true;
         if (el.challengeFailActions) el.challengeFailActions.hidden = false;
         if (el.challengeQuestion) {
-          el.challengeQuestion.textContent = "鉴宝失败！货物品级将下降——或使用补给挽回。";
+          el.challengeQuestion.textContent = (FEATURES.IAP_ENABLED ? "鉴宝失败！货物品级将下降——或使用补给挽回。" : "鉴宝失败！货物品级将下降——可用钥匙/保级券挽回。");
         }
         const retryRem = categoryRemaining("challenge_retry");
         const retryOk = FEATURES.ADS_ENABLED && !challengeRetryUsed && retryRem > 0 && adsRemaining() > 0;
@@ -2881,9 +2889,11 @@
           const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
           const canUseCharge = protectCharges > 0;
           el.btnChallengeIapProtect.disabled = false;
+          // Item-based (保级券) always; real-money purchase only with a payment platform
+          el.btnChallengeIapProtect.hidden = !(canUseCharge || (FEATURES.IAP_ENABLED && sku));
           el.btnChallengeIapProtect.textContent = canUseCharge
             ? `使用保级券 ×${protectCharges}`
-            : `＄${(sku && sku.price) || "$1.99"} 单次贵货保级`;
+            : `${(sku && sku.price) || ""} 单次贵货保级`.trim();
           logMono("iap_offer", "iap_protect_once", { protectCharges, keys });
         }
       }
@@ -2985,7 +2995,7 @@
           return;
         }
         const sku = IAP_SKUS.find((s) => s.id === "iap_protect_once");
-        if (!sku) return;
+        if (!sku || !FEATURES.IAP_ENABLED) return; // free trial: no real-money purchase
         logMono("iap_click", sku.id, { price: sku.price, via: "challenge" });
         showConfirm(
           "确认补给（测试）",
@@ -3017,8 +3027,8 @@
 
 
   /** Desktop layout (≥961px): the grid is the centre stage and is fitted to .grid-wrap (width AND height). */
-  const DESKTOP_CELL_MIN = 24;
-  const DESKTOP_CELL_MAX = 64; // layout f: 5×5 ≈ 320px (e used 120 → felt oversized)
+  const CELL_MIN = 24;
+  const CELL_MAX = 64; // layout f/g: 5×5 ≈ 322px on every layout (e used 120 on desktop → oversized)
   function isDesktopLayout() {
     return !!(window.matchMedia && window.matchMedia("(min-width: 961px)").matches);
   }
@@ -3027,30 +3037,48 @@
   }
 
   /**
-   * Fit --cell-size so the full N×N warehouse fits with no clipped cells / scrollbars.
-   * Mobile (≤700px): width of .grid-wrap only. Tablet 701–960px keeps the fixed per-size cells.
-   * Desktop (≥961px, layout f): the centre panel shrinks to its content, so the budget is NOT the
-   * wrap's own height (that would feed back). Width = .grid-wrap width (column-sized, content-free);
-   * height = from the wrap's top to the bottom of .main-layout / the viewport (whichever is higher up),
-   * minus panel padding and the tips line. Capped at DESKTOP_CELL_MAX (5×5 ≈ 320px), floored at MIN.
+   * Fit --cell-size so the full N×N warehouse fits with no clipped cells / scrollbars, on every layout.
+   * Width budget = .grid-wrap width (column / panel sized, independent of the grid).
+   * Height budget never reads the grid's own box (no feedback loop):
+   *  - Desktop ≥961px (layout f): from the wrap's top to the bottom of .main-layout / the viewport.
+   *  - Mobile ≤700px (layout g): .main-layout height minus every other visible panel (staging,
+   *    settle strip, crate chips…) minus the warehouse panel's own chrome (header, padding).
+   *    The panel is content-sized (flex:0 1 auto) so no empty box is left around the grid.
+   *  - Tablet 701–960px (page scrolls): the viewport height minus the panel chrome, so the whole
+   *    grid fits on screen once scrolled to.
+   * Cap CELL_MAX (64px, 5×5 ≈ 322px) / floor CELL_MIN. Set with !important priority: the mobile
+   * stylesheet declares --cell-size clamp()s with !important that otherwise beat the inline value
+   * (that was the 「移动端还是有点小」 bug: 26–34px cells whatever the panel size).
    * Hit-testing / drag ghost read cell rects from the DOM (cellFromPoint / measuredCellSize) and ghost
    * cells use the same var, so they stay aligned at any size.
    */
+  function setCellSizePx(px) {
+    const root = document.documentElement.style;
+    if (root.getPropertyValue("--cell-size") !== px + "px" || root.getPropertyPriority("--cell-size") !== "important") {
+      root.setProperty("--cell-size", px + "px", "important");
+    }
+  }
+  function outerH(n) {
+    if (!n || n.offsetParent === null) return 0;
+    const cs = getComputedStyle(n);
+    if (cs.position === "absolute" || cs.position === "fixed") return 0;
+    return n.getBoundingClientRect().height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+  }
   function fitCellSizeToWrap() {
     const mobile = window.matchMedia("(max-width: 700px)").matches;
     document.body.classList.toggle("is-mobile", mobile);
     const desktop = !mobile && isDesktopLayout();
-    if (!mobile && !desktop) return;
     const wrap = el.gridWrap || document.querySelector(".grid-wrap");
     if (!wrap || !gridSize) return;
     const style = getComputedStyle(wrap);
     const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+    const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    const availW = wrap.clientWidth - padX - 2; // 2 = grid border
+    const panel = wrap.closest(".panel");
+    const main = wrap.closest(".main-layout");
+    let availH;
     if (desktop) {
-      const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-      const availW = wrap.clientWidth - padX - 2; // 2 = grid border
       const wrapTop = wrap.getBoundingClientRect().top;
-      const main = wrap.closest(".main-layout");
-      const panel = wrap.closest(".panel");
       const pcs = panel ? getComputedStyle(panel) : null;
       const panelPadB = pcs ? (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0) : 0;
       const panelGap = pcs ? parseFloat(pcs.rowGap) || 0 : 0;
@@ -3058,19 +3086,36 @@
       const tipsH = tips && tips.offsetParent !== null ? tips.offsetHeight + panelGap : 0;
       let bottom = window.innerHeight - 10; // keep the grid on-screen even if side columns push the page
       if (main) bottom = Math.min(bottom, main.getBoundingClientRect().bottom);
-      const availH = bottom - wrapTop - padY - 2 - panelPadB - tipsH;
-      if (availW <= 0 || availH <= 0) return; // not laid out yet (hidden / jsdom)
-      const raw = Math.floor(Math.min(availW, availH) / gridSize);
-      const px = Math.max(DESKTOP_CELL_MIN, Math.min(DESKTOP_CELL_MAX, raw));
-      const cur = document.documentElement.style.getPropertyValue("--cell-size");
-      if (cur !== px + "px") document.documentElement.style.setProperty("--cell-size", px + "px");
-      return;
+      availH = bottom - wrapTop - padY - 2 - panelPadB - tipsH;
+    } else {
+      // Warehouse-panel chrome = panel box minus the wrap box (header, paddings, borders, gaps).
+      const chrome = panel ? panel.getBoundingClientRect().height - wrap.getBoundingClientRect().height : 0;
+      let panelBudget;
+      const mcsAll = main ? getComputedStyle(main) : null;
+      if (mobile && main && mcsAll.display === "grid") {
+        // short landscape phone: 2-column grid layout — the warehouse owns its row
+        panelBudget = Math.min(main.getBoundingClientRect().bottom, window.innerHeight) -
+          (panel ? panel.getBoundingClientRect().top : 0) - 4;
+      } else if (mobile && main) {
+        const mcs = mcsAll;
+        const gap = parseFloat(mcs.rowGap) || 0;
+        let others = 0;
+        let visible = 0;
+        for (const child of main.children) {
+          const h = outerH(child);
+          if (child === panel) { visible++; continue; }
+          if (h > 0) { others += h; visible++; }
+        }
+        panelBudget = main.clientHeight - (parseFloat(mcs.paddingTop) || 0) - (parseFloat(mcs.paddingBottom) || 0) -
+          others - gap * Math.max(0, visible - 1);
+      } else {
+        panelBudget = window.innerHeight - 16; // tablet: page scrolls; fit the grid inside one screen
+      }
+      availH = panelBudget - chrome - padY - 2;
     }
-    const avail = Math.max(120, wrap.clientWidth - padX - 2);
-    // leave 1px border budget; clamp so 5×5 stays usable and 8×8 still fits
-    const raw = Math.floor(avail / gridSize);
-    const px = Math.max(16, Math.min(34, raw));
-    document.documentElement.style.setProperty("--cell-size", px + "px");
+    if (availW <= 0 || availH <= 0) return; // not laid out yet (hidden / jsdom)
+    const raw = Math.floor(Math.min(availW, availH) / gridSize);
+    setCellSizePx(Math.max(CELL_MIN, Math.min(CELL_MAX, raw)));
   }
 
   // ----- Grid -----
@@ -3079,26 +3124,18 @@
     grid = Array.from({ length: size }, () => Array(size).fill(null));
     placed.clear();
     document.documentElement.dataset.gridSize = String(size);
-    // Desktop: fixed cell sizes. Mobile media query owns --cell-size — do not inline-override it
-    // (inline 56px was blowing past mobile clamp and forcing page scroll).
+    // Every layout fits --cell-size to the available box (fitCellSizeToWrap); the fixed per-size value
+    // is only a provisional fallback until layout exists (e.g. jsdom / hidden tab).
     const mobile = window.matchMedia("(max-width: 700px)").matches;
-    if (mobile) {
-      // Fit after layout; provisional size avoids flash of desktop cells
-      document.documentElement.style.setProperty("--cell-size", "24px");
-    } else {
-      document.documentElement.style.removeProperty("--cell-size"); // clear prior mobile fit
-      document.documentElement.style.setProperty("--cell-size", fixedCellPx(size));
-    }
+    document.documentElement.style.setProperty("--cell-size", mobile ? "24px" : fixedCellPx(size));
     document.body.classList.toggle("is-mobile", mobile);
-    if (!mobile && isDesktopLayout()) fitCellSizeToWrap(); // synchronous: no flash of fixed cells
+    fitCellSizeToWrap(); // synchronous: no flash of provisional cells
     renderGrid();
     updateStats();
-    if (mobile || isDesktopLayout()) {
-      requestAnimationFrame(() => {
-        fitCellSizeToWrap();
-        renderGrid();
-      });
-    }
+    requestAnimationFrame(() => {
+      fitCellSizeToWrap();
+      renderGrid();
+    });
   }
 
   function cellsFor(defId, rot, or, oc) {
@@ -3187,6 +3224,7 @@
     el.warehouseGrid.querySelectorAll(".cell").forEach((c) => {
       c.classList.remove("hl-ok", "hl-bad");
     });
+    if (_touchFootprintEl) _touchFootprintEl.innerHTML = "";
   }
 
   function renderGrid() {
@@ -3439,7 +3477,7 @@
       const nsz = ni >= 0 && ni < GRID_SIZES.length - 1 ? GRID_SIZES[ni + 1] : null;
       el.btnExpand.title = !nsz
         ? "已达最大仓库"
-        : `扩容至 ${nsz}×${nsz}（${FEATURES.ADS_ENABLED ? "现金 / 广告 / 补给" : "现金 / 补给"}）`;
+        : `扩容至 ${nsz}×${nsz}（${FEATURES.IAP_ENABLED ? (FEATURES.ADS_ENABLED ? "现金 / 广告 / 补给" : "现金 / 补给") : `现金 ${formatYen(EXPAND_CASH_COST)}`}）`;
     }
     updateFeePreview();
     updateCrateButtons();
@@ -4481,7 +4519,7 @@
         : `🔑 ×${keys}`;
       el.keysChip.title = keyFragments > 0
         ? `钥匙 ×${keys} · 钥匙碎片 ${keyFragments}/${need}（满则合成）`
-        : "钥匙（内购占位货币）";
+        : (FEATURES.IAP_ENABLED ? "钥匙（补给 / 里程碑碎片）" : "钥匙（开箱里程碑碎片合成）");
     }
     if (el.discountChip) {
       const has = nextCrateDiscountPct > 0;
@@ -4495,16 +4533,26 @@
       const show = FEATURES.ORGANIZE_STUB_ENABLED || FEATURES.IAP_SHOP_ENABLED;
       el.btnSpeedOrganize.hidden = !show;
       el.btnSpeedOrganize.classList.remove("ad-chip"); // never hide with ADS_ENABLED=false sweep
+      // 一键整理: today's free use → key (🔑) item → [real-money only with a payment platform] → 明日免费
+      let orgDisabled = false;
       if (speedOrganizeUnlocked) {
         el.btnSpeedOrganize.textContent = "⚡ 一键整理";
         el.btnSpeedOrganize.title = "一键整理（已解锁）";
       } else if (organizeFreeRemaining() > 0) {
         el.btnSpeedOrganize.textContent = "⚡ 整理 今日免费";
         el.btnSpeedOrganize.title = "一键整理（今日免费 1 次）";
+      } else if (FEATURES.KEYS_ENABLED && keys >= ORGANIZE_KEY_COST) {
+        el.btnSpeedOrganize.textContent = `⚡ 整理 🔑×${ORGANIZE_KEY_COST}`;
+        el.btnSpeedOrganize.title = `一键整理（花 ${ORGANIZE_KEY_COST} 把钥匙，当前 ${keys}）`;
+      } else if (FEATURES.IAP_ENABLED) {
+        el.btnSpeedOrganize.textContent = `⚡ 整理 ${ORGANIZE_IAP_PRICE}`;
+        el.btnSpeedOrganize.title = `一键整理（补给 ${ORGANIZE_IAP_PRICE} 永久解锁）`;
       } else {
-        el.btnSpeedOrganize.textContent = `⚡ 整理 ${ORGANIZE_IAP_PRICE} / 🔑${ORGANIZE_KEY_COST}`;
-        el.btnSpeedOrganize.title = `一键整理（占位 ${ORGANIZE_IAP_PRICE} / 或花${ORGANIZE_KEY_COST}钥匙）`;
+        el.btnSpeedOrganize.textContent = "⚡ 整理（明日免费）";
+        el.btnSpeedOrganize.title = "今日免费次数已用完，明日再来（或用钥匙）";
+        orgDisabled = true;
       }
+      el.btnSpeedOrganize.disabled = orgDisabled;
     }
     // Packing mode: collapse crate chrome on mobile; keep staging visible
     const packingNow = !!(crateOpenedThisRound && !extractedThisRound);
@@ -4519,9 +4567,8 @@
     }
     // Ensure packing class is on as soon as crate is open (staging CSS depends on it)
     if (packingNow) document.body.classList.add("packing");
-    if (document.body.classList.contains("is-mobile") || window.matchMedia("(max-width: 700px)").matches) {
-      requestAnimationFrame(() => fitCellSizeToWrap());
-    }
+    // Immersive packing toggles chrome → refit (all layouts; ResizeObserver also catches it)
+    requestAnimationFrame(() => fitCellSizeToWrap());
   }
 
   function updateFreeRentOffer() {
@@ -4789,6 +4836,10 @@
   }
 
   function openShop() {
+    if (!FEATURES.IAP_ENABLED) {
+      showToast("试玩版未开放补给购买");
+      return;
+    }
     renderShop();
     if (el.shopModal) el.shopModal.hidden = false;
     logMono("iap_click", "shop_open");
@@ -4925,7 +4976,13 @@
       go("free");
       return;
     }
-    // Stub unlock: IAP $0.99 OR spend keys
+    // Free trial (no payment platform): never offer a real-money unlock
+    if (!FEATURES.IAP_ENABLED) {
+      showToast("今日免费整理已用完 · 明日免费（或用钥匙）");
+      updateKeysUI();
+      return;
+    }
+    // Stub unlock: IAP price OR spend keys (payment platform present)
     const keyOk = FEATURES.KEYS_ENABLED && keys >= ORGANIZE_KEY_COST;
     const msg = keyOk
       ? `解锁「一键整理」· ${ORGANIZE_IAP_PRICE}（占位）
@@ -4965,8 +5022,8 @@
     if (!speedOrganizeUnlocked && FEATURES.KEYS_ENABLED && keys >= ORGANIZE_KEY_COST && staging.length > 0) {
       showConfirm(
         "钥匙整理",
-        `花费钥匙 ×${ORGANIZE_KEY_COST} 进行一次一键整理？
-（也可在补给花 ${ORGANIZE_IAP_PRICE} 永久解锁）`,
+        `花费钥匙 ×${ORGANIZE_KEY_COST} 进行一次一键整理？（当前 ${keys}）` +
+          (FEATURES.IAP_ENABLED ? `\n（也可在补给花 ${ORGANIZE_IAP_PRICE} 永久解锁）` : ""),
         () => {
           keys -= ORGANIZE_KEY_COST;
           updateKeysUI();
@@ -5516,6 +5573,83 @@
     }
   }
 
+  // ----- Touch drag lift (release g): on phones the finger hid the dragged item. For touch/pen drags the
+  // ghost floats TOUCH_LIFT_GAP px above the touch point, the target cell comes from the ghost's top-left
+  // cell (what you see is where it lands), and the exact landing footprint is drawn as a strong
+  // green/red overlay on top of the grid. Mouse drags are untouched (ghost snaps under the cursor).
+  const TOUCH_LIFT_GAP = 28;
+  let _touchFootprintEl = null;
+  let _touchFingerEl = null;
+
+  function ghostDims(defId, rot) {
+    const cells = shapeCells(getDef(defId).shape, rot);
+    const maxR = Math.max(...cells.map((c) => c[0]));
+    const maxC = Math.max(...cells.map((c) => c[1]));
+    const { w: cw, h: ch } = measuredCellSize();
+    return { cw, ch, gw: (maxC + 1) * cw, gh: (maxR + 1) * ch };
+  }
+
+  /** Lifted ghost top-left for a touch point: centred horizontally, bottom edge TOUCH_LIFT_GAP above the finger, kept on screen. */
+  function touchLiftGeom(defId, rot, x, y) {
+    const { cw, ch, gw, gh } = ghostDims(defId, rot);
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    let gx = x - gw / 2;
+    let gy = y - TOUCH_LIFT_GAP - gh;
+    gx = gw + 8 >= vw ? 4 : Math.min(Math.max(4, gx), vw - gw - 4);
+    gy = Math.max(4, gy);
+    return { gx, gy, gw, gh, cw, ch };
+  }
+
+  /** Grid cell whose area contains the centre of the ghost's top-left cell (touch lift). */
+  function cellFromGhostOrigin(gx, gy, cw, ch) {
+    return cellFromPoint(gx + cw / 2, gy + ch / 2);
+  }
+
+  /** Drag target for a pointer position: raw point for mouse, lifted-ghost origin for touch/pen. */
+  function dragSnapAt(x, y) {
+    const entry = currentDragEntry();
+    if (!drag.touch || !entry) return cellFromPoint(x, y);
+    const g = touchLiftGeom(entry.defId, drag.rot, x, y);
+    drag.ghostPt = { x: g.gx + g.gw / 2, y: g.gy + g.gh / 2 };
+    return cellFromGhostOrigin(g.gx, g.gy, g.cw, g.ch);
+  }
+
+  function renderTouchFootprint(cells, ok) {
+    if (!_touchFootprintEl) {
+      _touchFootprintEl = document.createElement("div");
+      _touchFootprintEl.className = "touch-footprint";
+      _touchFootprintEl.setAttribute("aria-hidden", "true");
+      document.body.appendChild(_touchFootprintEl);
+    }
+    let html = "";
+    for (const { r, c } of cells) {
+      if (r < 0 || c < 0 || r >= gridSize || c >= gridSize) continue;
+      const rc = cellRect(r, c);
+      if (!rc) continue;
+      html += `<div class="fp-cell ${ok ? "ok" : "bad"}" style="left:${rc.left}px;top:${rc.top}px;width:${rc.width}px;height:${rc.height}px"></div>`;
+    }
+    _touchFootprintEl.innerHTML = html;
+  }
+
+  function showTouchFinger(x, y, g) {
+    if (!_touchFingerEl) {
+      _touchFingerEl = document.createElement("div");
+      _touchFingerEl.className = "touch-finger";
+      _touchFingerEl.setAttribute("aria-hidden", "true");
+      _touchFingerEl.innerHTML = '<div class="tf-line"></div><div class="tf-dot"></div>';
+      document.body.appendChild(_touchFingerEl);
+    }
+    _touchFingerEl.hidden = false;
+    const bottom = g.gy + g.gh;
+    const line = _touchFingerEl.firstChild;
+    const dot = _touchFingerEl.lastChild;
+    dot.style.left = x + "px";
+    dot.style.top = y + "px";
+    line.style.left = x + "px";
+    line.style.top = Math.min(bottom, y) + "px";
+    line.style.height = Math.max(0, y - bottom) + "px";
+  }
+
   /** Map client coords → grid cell using cell[0,0] rect (shared by hit-test + ghost). */
   function cellFromPoint(clientX, clientY) {
     const grid = el.warehouseGrid;
@@ -5563,7 +5697,18 @@
     ghost.classList.toggle("invalid", !valid);
     ghost.style.gridTemplateColumns = `repeat(${maxC + 1}, ${cw}px)`;
     ghost.style.gap = "0px";
-    if (snapCell) {
+    const lift = drag.active && drag.touch ? touchLiftGeom(defId, rot, x, y) : null;
+    ghost.classList.toggle("touch-lift", !!lift);
+    if (lift) {
+      // Touch: float above the finger (never snapped under it); the footprint overlay shows the landing cells
+      // Over the grid the ghost snaps to the target COLUMN (same cells as the footprint) but keeps floating
+      // vertically, so its bottom edge stays TOUCH_LIFT_GAP above the finger.
+      const colRect = snapCell ? cellRect(snapCell.r, snapCell.c) : null;
+      ghost.style.left = (colRect ? colRect.left : lift.gx) + "px";
+      ghost.style.top = lift.gy + "px";
+      ghost.style.transform = "";
+      showTouchFinger(x, y, lift);
+    } else if (snapCell) {
       const rect = cellRect(snapCell.r, snapCell.c);
       if (rect) {
         ghost.style.left = rect.left + "px";
@@ -5595,6 +5740,9 @@
   function hideGhost() {
     el.dragGhost.hidden = true;
     el.dragGhost.innerHTML = "";
+    el.dragGhost.classList.remove("touch-lift");
+    if (_touchFingerEl) _touchFingerEl.hidden = true;
+    if (_touchFootprintEl) _touchFootprintEl.innerHTML = "";
   }
 
   function highlightAt(or, oc) {
@@ -5615,6 +5763,7 @@
       const cellEl = el.warehouseGrid.querySelector(`[data-r="${r}"][data-c="${c}"]`);
       if (cellEl) cellEl.classList.add(ok ? "hl-ok" : "hl-bad");
     }
+    if (drag.touch) renderTouchFootprint(cells, ok);
   }
 
   function updatePlaceTargetClass() {
@@ -5622,7 +5771,7 @@
     el.warehouseGrid.classList.toggle("place-target", ready);
   }
 
-  function beginDrag(uid, from, x, y) {
+  function beginDrag(uid, from, x, y, pointerType) {
     let entry;
     if (from === "staging") {
       entry = findStaging(uid);
@@ -5647,6 +5796,9 @@
     drag.moved = false;
     drag.startX = x;
     drag.startY = y;
+    drag.touch = !!pointerType && pointerType !== "mouse";
+    drag.ghostPt = null;
+    el.warehouseGrid.classList.toggle("touch-dragging", drag.touch);
     selectedUid = uid;
     showDetail({ ...entry, rot: drag.rot });
     updatePlaceTargetClass();
@@ -5656,7 +5808,7 @@
     }
     setDragScrollLock(true);
     _lastPointer = { x, y };
-    const snap0 = cellFromPoint(x, y);
+    const snap0 = dragSnapAt(x, y);
     if (snap0) highlightAt(snap0.r, snap0.c);
     showGhost(entry.defId, drag.rot, x, y, snap0 ? drag.valid : true, snap0);
     document.body.style.cursor = "grabbing";
@@ -5689,6 +5841,7 @@
       startY: e.clientY,
       // Mobile: prefer tap-to-place; require a longer drag before lifting into drag mode
       threshold: (e.pointerType === "touch" || isCoarsePointer()) ? 28 : 8,
+      pointerType: e.pointerType || "mouse",
     };
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -5731,7 +5884,7 @@
   }
 
   function onCellEnter(e) {
-    if (!drag.active) return;
+    if (!drag.active || drag.touch) return; // touch targets come from the lifted ghost, not the finger
     const snap = { r: +e.currentTarget.dataset.r, c: +e.currentTarget.dataset.c };
     highlightAt(snap.r, snap.c);
     const entry = currentDragEntry();
@@ -5746,7 +5899,7 @@
       const dist = Math.abs(e.clientX - p.startX) + Math.abs(e.clientY - p.startY);
       const thr = p.threshold != null ? p.threshold : 8;
       if (dist > thr) {
-        beginDrag(p.uid, p.from, e.clientX, e.clientY);
+        beginDrag(p.uid, p.from, e.clientX, e.clientY, e.pointerType || p.pointerType);
       } else {
         return;
       }
@@ -5759,8 +5912,9 @@
     if (!entry) return;
     _lastPointer = { x: e.clientX, y: e.clientY };
 
-    const snap = cellFromPoint(e.clientX, e.clientY);
-    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const snap = dragSnapAt(e.clientX, e.clientY);
+    const probe = drag.touch && drag.ghostPt ? drag.ghostPt : { x: e.clientX, y: e.clientY };
+    const under = document.elementFromPoint(probe.x, probe.y);
     if (snap) {
       highlightAt(snap.r, snap.c);
       el.stagingArea.classList.remove("drag-over");
@@ -5790,7 +5944,9 @@
     setDragScrollLock(false);
 
     const entry = currentDragEntry();
-    const under = e ? document.elementFromPoint(e.clientX, e.clientY) : null;
+    // Touch: the drop target is where the lifted ghost is, not under the finger
+    const probe = drag.touch && drag.ghostPt ? drag.ghostPt : e ? { x: e.clientX, y: e.clientY } : null;
+    const under = probe ? document.elementFromPoint(probe.x, probe.y) : null;
     const overStaging = !!under?.closest?.("#stagingArea");
 
     let audioOutcome = null; // "snap" | "return" | null
@@ -5848,6 +6004,9 @@
     drag.limbo = null;
     drag._hlValid = null;
     drag.pending = null;
+    drag.touch = false;
+    drag.ghostPt = null;
+    el.warehouseGrid.classList.remove("touch-dragging");
     renderStaging();
     renderGrid();
     updateStats();
@@ -5920,11 +6079,12 @@
 
   function onCellPointerUp(e) {
     if (drag.active) {
-      const snap = cellFromPoint(e.clientX, e.clientY) || {
+      const snap = drag.touch ? dragSnapAt(e.clientX, e.clientY) : cellFromPoint(e.clientX, e.clientY) || {
         r: +e.currentTarget.dataset.r,
         c: +e.currentTarget.dataset.c,
       };
-      highlightAt(snap.r, snap.c);
+      if (snap) highlightAt(snap.r, snap.c);
+      else { clearHighlights(); drag.lastCell = null; drag.valid = false; }
       finishDrag(e, false);
       return;
     }
@@ -5946,12 +6106,13 @@
       return;
     }
     if (!drag.active) return;
-    const snap = cellFromPoint(e.clientX, e.clientY);
+    const snap = dragSnapAt(e.clientX, e.clientY);
     if (snap) {
       highlightAt(snap.r, snap.c);
       finishDrag(e, false);
       return;
     }
+    if (drag.touch) { clearHighlights(); drag.lastCell = null; drag.valid = false; }
     finishDrag(e, false);
   }
 
@@ -5961,10 +6122,14 @@
       drag.rot = (drag.rot + 1) % 4;
       fx("rotate");
       const entry = currentDragEntry();
-      const snap = drag.lastCell
-        ? { r: drag.lastCell.r, c: drag.lastCell.c }
-        : cellFromPoint(_lastPointer.x, _lastPointer.y);
+      // Touch: the rotated ghost has new dimensions → re-derive the target from the lifted ghost
+      const snap = drag.touch
+        ? dragSnapAt(_lastPointer.x, _lastPointer.y)
+        : drag.lastCell
+          ? { r: drag.lastCell.r, c: drag.lastCell.c }
+          : cellFromPoint(_lastPointer.x, _lastPointer.y);
       if (entry && snap) highlightAt(snap.r, snap.c);
+      else if (drag.touch) { clearHighlights(); drag.lastCell = null; drag.valid = false; }
       if (entry) {
         showGhost(
           entry.defId,
@@ -5972,7 +6137,7 @@
           _lastPointer.x,
           _lastPointer.y,
           drag.valid,
-          snap || drag.lastCell
+          drag.touch ? snap : snap || drag.lastCell
         );
         showDetail({ ...entry, rot: drag.rot });
       }
@@ -6443,7 +6608,7 @@
     updateStats();
     el.roundLog.innerHTML = "";
     addLog(`新开档 · 启动资金 <strong>${formatYen(STARTING_CASH)}</strong> · 仓库 ${DEFAULT_GRID}×${DEFAULT_GRID}`);
-    setActionDesc("新档已开。默认仓库 5×5，几乎每场都要弃货——或使用「扩容」/补给。");
+    setActionDesc(`新档已开。默认仓库 5×5，几乎每场都要弃货——或使用「扩容」${FEATURES.IAP_ENABLED ? "/补给" : ""}。`);
     scheduleSave();
     showToast("存档已清除，新档开始");
   }
@@ -6453,6 +6618,11 @@
     const maxSize = GRID_SIZES[GRID_SIZES.length - 1];
     if (gridSize >= maxSize) {
       showToast("仓库已达最大规格");
+      return;
+    }
+    // Free trial: no real-money path — expand with in-game cash directly
+    if (!FEATURES.IAP_ENABLED) {
+      tryExpandWithCash();
       return;
     }
     const idx = GRID_SIZES.indexOf(gridSize);
@@ -7097,7 +7267,9 @@
         if (e.shiftKey) tryExpandWithCash();
         else tryExpandWarehouse();
       });
-      el.btnExpand.title = "扩容：点击打开补给；Shift+点击用现金";
+      el.btnExpand.title = FEATURES.IAP_ENABLED
+        ? "扩容：点击打开补给；Shift+点击用现金"
+        : `扩容：花现金 ${formatYen(EXPAND_CASH_COST)} 升一级`;
     }
 
     if (el.btnShop) {
@@ -7137,6 +7309,9 @@
 
     // Ads master switch: hide all ad chips/bars when FEATURES.ADS_ENABLED=false (+ body.ads-off CSS gate)
     document.body.classList.toggle("ads-off", !FEATURES.ADS_ENABLED);
+    // IAP gate: no payment platform → no real-money price anywhere (body.iap-off hides .iap-only)
+    document.body.classList.toggle("iap-off", !FEATURES.IAP_ENABLED);
+    if (el.btnShop) el.btnShop.hidden = !FEATURES.IAP_ENABLED;
     if (!FEATURES.ADS_ENABLED) {
       document.querySelectorAll(".ad-chip, .bankrupt-ad-slot, #revealAdBar, #adCapLine, #warehouseFullOffers, #resultAdSlot").forEach((n) => {
         n.hidden = true;
@@ -7291,37 +7466,31 @@
     // Keep --cell-size ownership correct across rotate/resize
     const mqMobile = window.matchMedia("(max-width: 700px)");
     const syncCellSizeOwner = () => {
-      const mobile = mqMobile.matches;
-      document.body.classList.toggle("is-mobile", mobile);
-      if (mobile) {
-        fitCellSizeToWrap();
-        renderGrid();
-      } else {
-        document.documentElement.style.setProperty("--cell-size", fixedCellPx(gridSize));
-        fitCellSizeToWrap(); // desktop: fit to .grid-wrap; tablet keeps fixed
-        renderGrid();
-      }
+      document.body.classList.toggle("is-mobile", mqMobile.matches);
+      fitCellSizeToWrap(); // every layout fits to its own budget (mobile / tablet / desktop)
+      renderGrid();
     };
     mqMobile.addEventListener("change", syncCellSizeOwner);
     const mqDesktop = window.matchMedia("(min-width: 961px)");
     if (mqDesktop.addEventListener) mqDesktop.addEventListener("change", syncCellSizeOwner);
-    window.addEventListener("resize", () => {
-      if (mqMobile.matches || mqDesktop.matches) {
-        fitCellSizeToWrap();
-      }
+    window.addEventListener("resize", () => { fitCellSizeToWrap(); }, { passive: true });
+    window.addEventListener("orientationchange", () => {
+      requestAnimationFrame(() => fitCellSizeToWrap());
     }, { passive: true });
-    // Desktop: header wraps / packing chrome collapse change the wrap box without a window resize.
+    // Header wraps / packing chrome collapse / staging strip growing change the budget without a
+    // window resize. The budget never reads the grid itself, so a refit after the grid resizes is a no-op.
     if (typeof ResizeObserver === "function") {
       const wrapEl = el.gridWrap || document.querySelector(".grid-wrap");
       const mainEl = document.querySelector(".main-layout");
       if (wrapEl) {
         let roRaf = 0;
         const ro = new ResizeObserver(() => {
-          if (!mqDesktop.matches || roRaf) return;
+          if (roRaf) return;
           roRaf = requestAnimationFrame(() => { roRaf = 0; fitCellSizeToWrap(); });
         });
         ro.observe(wrapEl);
         if (mainEl) ro.observe(mainEl); // header collapse (packing) changes the height budget
+        document.querySelectorAll(".staging-panel, .info-panel, .crate-panel, .top-bar").forEach((n) => ro.observe(n));
       }
     }
   }
@@ -7343,7 +7512,7 @@
     try { updateStats(); } catch (e) { console.warn("[boot] updateStats", e); }
     try { updateKeysUI(); } catch (e) { console.warn("[boot] updateKeysUI", e); }
     setActionDesc(
-      `欢迎来到仓储拍卖场。启动资金 ${formatYen(STARTING_CASH)}（约 3–4 次普通柜）。默认仓库 ${DEFAULT_GRID}×${DEFAULT_GRID}，装箱极紧。${FEATURES.ADS_ENABLED ? "补给/广告为占位。" : "补给为占位。"}`
+      `欢迎来到仓储拍卖场。启动资金 ${formatYen(STARTING_CASH)}（约 3–4 次普通柜）。默认仓库 ${DEFAULT_GRID}×${DEFAULT_GRID}，装箱极紧。${FEATURES.IAP_ENABLED ? (FEATURES.ADS_ENABLED ? "补给/广告为占位。" : "补给为占位。") : "试玩版全部免费。"}`
     );
     addLog(`入场 · 启动资金 <strong>${formatYen(STARTING_CASH)}</strong> · 仓库 ${DEFAULT_GRID}×${DEFAULT_GRID}`);
   } else {

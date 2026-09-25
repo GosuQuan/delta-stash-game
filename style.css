@@ -3282,6 +3282,85 @@ body.wealth-gold .top-bar {
   .crate-btn .crate-desc { font-size: 10px; }
 }
 
+
+/* ===== Layout g: phones + tablets — warehouse panel hugs the fitted grid =====
+ * fitCellSizeToWrap() sizes cells from the panel's width and the height left over by the other
+ * panels (cap 64px, min 24px) and sets --cell-size with !important (beats the old clamp()s).
+ * The panel is content-sized and vertically centred in the leftover, so no empty box around it. */
+@media (max-width: 700px) {
+  .grid-panel,
+  body.packing .grid-panel {
+    flex: 0 1 auto;
+    min-height: 0;
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+  .grid-wrap {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+  .grid-tips { position: static; }
+}
+@media (min-width: 701px) and (max-width: 960px) {
+  .grid-panel { align-items: stretch; }
+  .grid-wrap {
+    width: 100%;
+    max-width: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+}
+
+/* ===== Touch drag lift (release g): touch/pen drags only — ghost floats above the finger,
+ * landing footprint drawn as a strong overlay above grid items. Mouse drags never get these. ===== */
+.drag-ghost.touch-lift {
+  opacity: 1;
+  transform: scale(1.05);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+}
+.drag-ghost.touch-lift .ghost-cell { border-width: 2px !important; }
+/* grid lines while touch-dragging so the footprint reads against the board */
+.warehouse-grid.touch-dragging .cell:not(.occupied) {
+  background: #17231b;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+/* above the ghost (z 1000): the landing cells stay clearly green/red even under the lifted ghost */
+.touch-footprint { position: fixed; inset: 0; pointer-events: none; z-index: 1001; }
+.touch-footprint .fp-cell {
+  position: fixed;
+  box-sizing: border-box;
+  border-radius: 3px;
+}
+.touch-footprint .fp-cell.ok {
+  background: rgba(46, 204, 113, 0.42);
+  border: 3px solid #2ecc71;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.touch-footprint .fp-cell.bad {
+  background: rgba(231, 76, 60, 0.45);
+  border: 3px solid #e74c3c;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.touch-finger { position: fixed; inset: 0; pointer-events: none; z-index: 1002; }
+.touch-finger[hidden] { display: none !important; }
+.touch-finger .tf-dot {
+  position: fixed;
+  width: 14px; height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35);
+}
+.touch-finger .tf-line {
+  position: fixed;
+  width: 2px;
+  margin-left: -1px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.2));
+}
+
 /* ===== Ads gate — kept LAST in the file so it wins by source order too (tests/ads_off.test.js) ===== */
 /* Ads off (FEATURES.ADS_ENABLED=false → body.ads-off, default in index.html so no pre-JS flash):
  * ad UI is removed from layout entirely — never shown greyed/disabled, never reserves space.
@@ -3300,3 +3379,11 @@ body.ads-off .bankrupt-ad-slot {
 /* display:flex/block on these beat the [hidden] attribute (the 「看广告立刻开箱？（已关闭）」 leak) */
 .reveal-ad-bar[hidden], .mono-row[hidden], .ad-cap-line[hidden],
 .result-ad-slot[hidden], .bankrupt-ad-slot[hidden] { display: none !important; }
+
+/* ===== IAP gate (release g) — also LAST: no payment platform → FEATURES.IAP_ENABLED=false → body.iap-off.
+ * No real-money price ($ / USD / x.99) may render; key (🔑) / 保级券 item paths stay JS-controlled. ===== */
+body.iap-off .iap-only,
+body.iap-off #btnShop,
+body.iap-off #shopModal {
+  display: none !important;
+}
