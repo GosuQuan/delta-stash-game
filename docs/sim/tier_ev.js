@@ -9,7 +9,7 @@
  * 用法：
  *   node docs/sim/tier_ev.js [N=10000] [--game path/to/game.js] [--quiz 0.7] [--ball 0.7]
  *                            [--pity K] [--json out.json]
- *   node docs/sim/tier_ev.js --pace [--runs 2000] [--cap 400] [--profile optimal|conservative|both]
+ *   node docs/sim/tier_ev.js --pace [--runs 2000] [--cap 400] [--profile all|optimal|conservative|steady|both]
  *                            [--game ...] [--quiz 0.7] [--hm-off] [--json out.json]
  *   环境变量 GAME_JS 同 --game。默认 game.js = ../../game.js（相对本文件）。
  *
@@ -20,6 +20,8 @@
  *  - 鉴宝：值 ≥ 门槛（¥14k）的每件货触发，50% 答题 / 50% 跟球。答题答对率 --quiz（默认 0.7），
  *    跟球成功率 --ball（默认同 --quiz）。答对 = 不变；答错 = 降一级换物件、值 ×0.42–0.54；
  *    跟球成功（≥80%）= ×1.05–1.10；跟球失败（<50%）= 45% 降级，否则 ×0.60–0.75。
+ *  - 节奏三档：optimal（25 格贪心，每场租“期望净利最高、租得起”的柜）、conservative（同样选柜，20 格装箱）、
+ *    steady 稳健（20 格装箱；每场租“租金 ≤ 当前现金 40%”里最贵的柜，没有就租得起的最便宜的柜）。
  */
 "use strict";
 const fs = require("fs");
@@ -231,15 +233,20 @@ function runGroup({ tier, hall, honeymoon, n, seed, lossStreak = 0, quiz = 0.7, 
  * tracked as in game; halls unlock by peak cash (highest active); honeymoon ends permanently once
  * round > 5 or cash ≥ ¥45k.
  */
+const STEADY_RENT_SHARE = 0.4;
 function paceProfile(profile, { runs, cap, quiz, ball, seed, evN, hmOff = false }) {
-  // EV tables: key `${hm}|${hall}` → tier → mean sale
+  // optimal = full 25-cell greedy; conservative / steady = 20-cell packer
+  const pack = profile === "optimal" ? "optimal" : "conservative";
+  const policy = profile === "steady" ? "steady" : "ev";
+  // EV tables (ev policy only): key `${hm}|${hall}` → tier → mean sale
   const ev = {};
   let s = 900001;
-  for (const hm of [true, false]) for (const hall of [null, ...HALLS]) {
+  if (policy === "ev") for (const hm of [true, false]) for (const hall of [null, ...HALLS]) {
     const row = {};
-    for (const tier of TIERS) row[tier] = runGroup({ tier, hall, honeymoon: hm, n: evN, seed: s++, quiz, ball, profile }).meanSale;
+    for (const tier of TIERS) row[tier] = runGroup({ tier, hall, honeymoon: hm, n: evN, seed: s++, quiz, ball, profile: pack }).meanSale;
     ev[`${hm}|${hall || "none"}`] = row;
   }
+  const HM = G.HONEYMOON;
   const hallCfg = G.AUCTION_HALL_CFG.TIERS;
   const L = G.LIMITED_CFG;
   const out = { profile, runs, cap, reach80: [], reach300: [], bankruptAt: [], belowCommon10: 0, belowCommonPostHM: 0, crateMix: {} };
@@ -250,7 +257,7 @@ function paceProfile(profile, { runs, cap, quiz, ball, seed, evN, hmOff = false 
     let cash = 15000, peak = 15000, hmEnded = hmOff, goodDrop = false, loss = 0, disc = 0, hall = null;
     let r80 = null, r300 = null, bk = null, below10 = false, belowPost = false, hmEndRound = null;
     for (let round = 1; round <= cap; round++) {
-      if (!hmEnded && !(round <= 5 && cash < 45000)) { hmEnded = true; hmEndRound = round; }
+      if (!hmEnded && !(round <= HM.ROUNDS && cash < HM.CASH_END)) { hmEnded = true; hmEndRound = round; }
       G.setState({ round, cash, honeymoonEnded: hmEnded, lossStreak: loss, hall, goodDropSeen: goodDrop });
       const eff = (tier) => {
         const f = G.tierFee(tier);
@@ -266,29 +273,37 @@ function paceProfile(profile, { runs, cap, quiz, ball, seed, evN, hmOff = false 
         if (hmEnded && round <= G.HONEYMOON.ROUNDS + L.POST_HONEYMOON_ROUNDS) chance = Math.min(0.85, chance + L.POST_HONEYMOON_ROLL_BONUS);
         limitedOn = R() < chance;
       }
-      const hmNow = G.honeymoonActive();
-      const row = ev[`${hmNow}|${hall || "none"}`];
-      let best = null, bestEV = -Infinity;
-      for (const tier of TIERS) {
-        if (tier === "limited" && !limitedOn) continue;
-        const f = eff(tier);
-        if (f > cash) continue;
-        const e = row[tier] - f;
-        if (e > bestEV) { bestEV = e; best = tier; }
+      let best = null;
+      const avail = TIERS.filter((t) => (t !== "limited" || limitedOn) && eff(t) <= cash);
+      if (policy === "steady") {
+        // most expensive crate with rent ≤ 40% of cash; if none, cheapest affordable (usually common)
+        const safe = avail.filter((t) => eff(t) <= STEADY_RENT_SHARE * cash);
+        const pool = safe.length ? safe : avail;
+        for (const t of pool) {
+          if (!best) best = t;
+          else if (safe.length ? eff(t) > eff(best) : eff(t) < eff(best)) best = t;
+        }
+      } else {
+        const row = ev[`${G.honeymoonActive()}|${hall || "none"}`];
+        let bestEV = -Infinity;
+        for (const t of avail) {
+          const e = row[t] - eff(t);
+          if (e > bestEV) { bestEV = e; best = t; }
+        }
       }
       if (!best) { bk = round; break; } // cannot afford anything (e.g. common > cash ≥ MIN_FEE edge)
       const fee = eff(best);
       cash -= fee; disc = 0;
       out.crateMix[best]++;
       G.setState({ cash });
-      const { res } = openOnce(best, fee, profile, quiz, ball);
+      const { res } = openOnce(best, fee, pack, quiz, ball);
       goodDrop = G.goodDropSeen();
       cash += res.sale;
       if (res.perfect) disc = G.PERFECT_PACK.NEXT_DISCOUNT_PCT;
       loss = res.packedValue < fee ? loss + 1 : 0;
       if (cash > peak) peak = cash;
       for (const t of hallCfg) if (peak >= t.peakCash) hall = t.id;
-      if (!hmEnded && !(round <= 5 && cash < 45000)) { hmEnded = true; hmEndRound = round + 1; }
+      if (!hmEnded && !(round <= HM.ROUNDS && cash < HM.CASH_END)) { hmEnded = true; hmEndRound = round + 1; }
       if (r80 == null && cash >= 80000) r80 = round;
       if (r300 == null && cash >= 300000) { r300 = round; break; }
     }
@@ -311,6 +326,7 @@ function paceProfile(profile, { runs, cap, quiz, ball, seed, evN, hmOff = false 
     bankrupt: out.bankruptAt.filter((x) => x != null).length / runs,
     bankrupt10: out.bankruptAt.filter((x) => x != null && x <= 10).length / runs,
     bankrupt15: out.bankruptAt.filter((x) => x != null && x <= 15).length / runs,
+    bankrupt16plus: out.bankruptAt.filter((x) => x != null && x > 15).length / runs,
     belowCommon10: out.belowCommon10 / runs, belowCommonPostHM: out.belowCommonPostHM / runs,
     crateMix: Object.fromEntries(Object.entries(out.crateMix).map(([k, v]) => [k, v / total])),
     ev,
@@ -325,16 +341,16 @@ if (require.main === module) {
   console.error(`game.js = ${GAME}  quiz=${quiz} ball=${ball}`);
   if (args.includes("--pace")) {
     const runs = +argVal("--runs", 2000), cap = +argVal("--cap", 400), evN = +argVal("--evn", 4000);
-    const prof = argVal("--profile", "both");
-    const profiles = prof === "both" ? ["optimal", "conservative"] : [prof];
+    const prof = argVal("--profile", "all");
+    const profiles = prof === "all" ? ["conservative", "steady", "optimal"] : prof === "both" ? ["optimal", "conservative"] : [prof];
     const hmOff = args.includes("--hm-off"); // sensitivity only: start with honeymoon already ended
-    const res = profiles.map((p, i) => paceProfile(p, { runs, cap, quiz, ball, seed: 777 + i, evN, hmOff }));
+    const res = profiles.map((p, i) => paceProfile(p, { runs, cap, quiz, ball, seed: 777 + ["optimal", "conservative", "steady"].indexOf(p), evN, hmOff }));
     if (jsonOut) fs.writeFileSync(jsonOut, JSON.stringify(res, null, 1));
     const pct = (x) => (x * 100).toFixed(1) + "%";
     for (const r of res) {
       console.log(`[${r.profile}] runs=${r.runs} cap=${r.cap}  median→80k=${r.median80} (reached-only ${r.median80Reached}, never ${pct(r.never80)})` +
         `  median→300k=${r.median300} (reached-only ${r.median300Reached}, never ${pct(r.never300)})`);
-      console.log(`   bankrupt=${pct(r.bankrupt)}  ≤10r=${pct(r.bankrupt10)}  ≤15r=${pct(r.bankrupt15)}  <commonRent in r1-10=${pct(r.belowCommon10)}` +
+      console.log(`   bankrupt=${pct(r.bankrupt)}  ≤10r=${pct(r.bankrupt10)}  ≤15r=${pct(r.bankrupt15)}  16+r=${pct(r.bankrupt16plus)}  <commonRent in r1-10=${pct(r.belowCommon10)}` +
         `  <commonRent in 3r after HM=${pct(r.belowCommonPostHM)}  mix=${Object.entries(r.crateMix).map(([k, v]) => k + ":" + pct(v)).join(" ")}`);
     }
   } else {
