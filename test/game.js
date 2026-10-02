@@ -33,7 +33,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260926e";
+  const BUILD_VERSION = "20260926f";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -2010,6 +2010,29 @@
     return null;
   }
 
+  /**
+   * 「距青铜还差 …」 top-bar hint — always recomputed from the CURRENT state (peak = max(peakCash, cash)),
+   * never cached: called from updateHallUI, syncCashDisplay/snapCashDisplay (any cash change) and at the
+   * end of loadGame. Hidden hint carries no text (no stale copy lingering from an earlier state).
+   */
+  function updateHallHint() {
+    const h = el.hallUnlockHint;
+    if (!h) return;
+    const peak = Math.max(Number(peakCash) || 0, Number(cash) || 0);
+    const next = nextHallPreview();
+    const within = AUCTION_HALL_CFG.PREVIEW_WITHIN || 20000;
+    if (next && peak < next.peakCash && next.peakCash - peak <= within) {
+      const remain = next.peakCash - peak;
+      h.hidden = false;
+      h.textContent = `距${next.name.replace("拍卖厅", "")}还差 ${formatYen(remain)}`;
+      h.title = `峰值再积 ${formatYen(remain)} 可解锁「${next.name}」`;
+    } else {
+      h.hidden = true;
+      h.textContent = "";
+      h.removeAttribute("title");
+    }
+  }
+
   function updateHallUI() {
     const hall = activeAuctionHall();
     applyHallTheme(hall);
@@ -2025,19 +2048,7 @@
         el.hallChip.hidden = true;
       }
     }
-    // Faint preview when within ¥20k of next hall
-    if (el.hallUnlockHint) {
-      const next = nextHallPreview();
-      const within = AUCTION_HALL_CFG.PREVIEW_WITHIN || 20000;
-      if (next && peakCash < next.peakCash && next.peakCash - peakCash <= within) {
-        const remain = next.peakCash - peakCash;
-        el.hallUnlockHint.hidden = false;
-        el.hallUnlockHint.textContent = `距${next.name.replace("拍卖厅", "")}还差 ${formatYen(remain)}`;
-        el.hallUnlockHint.title = `峰值再积 ${formatYen(remain)} 可解锁「${next.name}」`;
-      } else {
-        el.hallUnlockHint.hidden = true;
-      }
-    }
+    updateHallHint();
     if (el.hallLine) {
       const bits = AUCTION_HALL_CFG.TIERS.map((t) => {
         const on = unlockedHalls.has(t.id);
@@ -3683,6 +3694,7 @@
     btn.classList.toggle("is-fancy", fancy);
     btn.setAttribute("aria-pressed", fancy ? "true" : "false");
     if (el.fxModeLabel) el.fxModeLabel.textContent = fancy ? "华丽" : "流畅";
+    btn.setAttribute("aria-label", "结算特效：" + (fancy ? "华丽" : "流畅"));
     btn.title = fancy
       ? "结算特效：华丽（回放+金币）。点此切回「流畅」"
       : "结算特效：流畅（仅盈亏音效+数字跳动）。点此开启「华丽」";
@@ -3797,6 +3809,7 @@
 
   function snapCashDisplay() {
     cashAnimToken++;
+    try { updateHallHint(); } catch (_) { /* display-only */ }
     displayCash = cash;
     if (!el.cashBalance) return;
     el.cashBalance.textContent = formatYen(cash);
@@ -4058,6 +4071,7 @@
   }
 
   function syncCashDisplay() {
+    try { updateHallHint(); } catch (_) { /* display-only */ }
     if (!el.cashBalance) return;
     el.cashBalance.classList.toggle("neg", cash < minPlayableFee());
     if (displayCash == null || prefersReducedMotion() || isLowFx()) {
@@ -6610,6 +6624,7 @@
   }
 
   // ----- Rotate -----
+  let _rotateSwallowClick = false; // set by btnRotate pointerdown when it already rotated (see bind())
   function rotateSelected() {
     if (drag.active) {
       drag.rot = (drag.rot + 1) % 4;
@@ -7117,7 +7132,7 @@
     applyHallTheme(null);
     document.body.classList.remove("wealth-gold");
     if (el.cashBalance) el.cashBalance.classList.remove("gold-outline");
-    if (el.hallUnlockHint) el.hallUnlockHint.hidden = true;
+    try { updateHallHint(); } catch (_) { if (el.hallUnlockHint) el.hallUnlockHint.hidden = true; }
     dailyActivityKey = todayKeyLocal();
     dailyActivityCount = 0;
     dailyActivityCompleted = false;
@@ -7666,6 +7681,7 @@
       el.bankruptModal.hidden = false;
     }
     updateStats();
+    updateHallUI(); // hall chip + 「距青铜还差」 hint recomputed from the loaded state
     updateLimitedOfferUI();
     maybeTriggerDailyJackpot();
     setActionDesc(
@@ -7697,16 +7713,25 @@
 
     el.btnOpenCrate.addEventListener("click", openCrate);
     if (el.btnDecryptNext) el.btnDecryptNext.addEventListener("click", decryptNextItem);
-        el.btnRotate.addEventListener("pointerdown", (e) => {
-      // During drag, rotate on press without waiting for click (click would end drag via pointerup)
-      if (drag.active || drag.pending || selectedUid) {
+    // ONE rotation per physical activation. Root cause of the old 180°: pointerdown rotated (for
+    // drag/pending) AND the click that follows the same press rotated again (pointerdown.preventDefault()
+    // does not cancel the later click; by click time the window pointerup has already ended the drag, so
+    // the old `if (drag.active) return` guard no longer applied). Now: press-while-holding rotates on
+    // pointerdown and arms a one-shot flag that swallows the click of THAT press; every other activation
+    // (mouse/touch tap, keyboard Enter/Space on the focused button) rotates once on click.
+    el.btnRotate.addEventListener("pointerdown", (e) => {
+      _rotateSwallowClick = false;
+      if (drag.active || drag.pending) {
         e.preventDefault();
         e.stopPropagation();
+        _rotateSwallowClick = true;
         rotateSelected();
       }
     });
+    el.btnRotate.addEventListener("keydown", () => { _rotateSwallowClick = false; }); // Enter/Space activation is a fresh click
     el.btnRotate.addEventListener("click", (e) => {
-      if (drag.active) {
+      if (_rotateSwallowClick) {
+        _rotateSwallowClick = false;
         e.preventDefault();
         return;
       }

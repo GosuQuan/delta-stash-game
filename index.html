@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>仓储拍卖 · 集装箱开箱</title>
-  <link rel="stylesheet" href="style.css?v=20260926e" />
+  <link rel="stylesheet" href="style.css?v=20260926f" />
 </head>
 <body class="ads-off iap-off">
   <div id="app">
@@ -56,11 +56,11 @@
           </label>
         </div>
         <div class="header-actions" role="toolbar" aria-label="顶栏操作">
-          <button type="button" id="btnCodex" class="hdr-btn codex-btn" title="贵货图鉴">
+          <button type="button" id="btnCodex" class="hdr-btn codex-btn" title="贵货图鉴" aria-label="贵货图鉴">
             <svg class="hdr-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.5 5h5.5a4 4 0 0 1 4 4v11a3 3 0 0 0-3-3H2.5z"/><path d="M21.5 5H16a4 4 0 0 0-4 4v11a3 3 0 0 1 3-3h6.5z"/></svg>
             <span class="hdr-label">图鉴</span>
           </button>
-          <button type="button" id="btnShop" class="hdr-btn shop-btn iap-only" title="补给商店" hidden>
+          <button type="button" id="btnShop" class="hdr-btn shop-btn iap-only" title="补给商店" aria-label="补给商店" hidden>
             <svg class="hdr-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
             <span class="hdr-label">补给</span>
           </button>
@@ -193,7 +193,7 @@
         <div class="panel-header">
           <h2>转运仓库</h2>
           <div class="grid-actions">
-            <button type="button" id="btnRotate" class="btn ghost" title="旋转">↻ 旋转</button>
+            <button type="button" id="btnRotate" class="btn ghost" title="旋转" aria-label="旋转">↻ 旋转</button>
             <button type="button" id="btnSpeedOrganize" class="btn ghost inline" title="一键整理（今日免费 1 次）">⚡ 整理 今日免费</button>
             <button type="button" id="btnExpand" class="btn ghost expand-btn" title="扩容仓库（永久，现金 ¥40,000 起）">⬆ 扩容 ¥4万</button>
             <button type="button" id="btnClearGrid" class="btn ghost danger-text" title="清空仓库">清空</button>
@@ -269,7 +269,7 @@
 
     <div id="onboardingModal" class="modal onboarding-modal" hidden>
       <div class="modal-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
-        <p class="onboarding-kicker">DELTA STASH</p>
+        <p class="onboarding-kicker">STASH AUCTION</p>
         <h2 id="onboardingTitle">今天捡漏，还是血亏？</h2>
         <p class="onboarding-copy">选个仓储柜，开箱后把值钱货塞进仓库，再转卖回本。</p>
         <div class="onboarding-actions">
@@ -429,8 +429,8 @@
     
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script src="platform.js?v=20260926e"></script>
-  <script src="audio.js?v=20260926e"></script>
-  <script src="game.js?v=20260926e"></script>
+  <script src="platform.js?v=20260926f"></script>
+  <script src="audio.js?v=20260926f"></script>
+  <script src="game.js?v=20260926f"></script>
 </body>
 </html>
