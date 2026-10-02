@@ -6,9 +6,9 @@
 |---|---|
 | 文档名称 | 仓储拍卖开箱 / 格子仓库游戏 — 技术方案 |
 | 工作标题 | 仓储拍卖开箱（三角洲式格子背包体验） |
-| 版本 | **v0.1 初稿** |
-| 日期 | 2026-09-22 |
-| 状态 | **待评审** |
+| 版本 | **v0.1 初稿 + §14 现状对齐（20260926e）** |
+| 日期 | 2026-09-22（初稿）/ 2026-10-02（§14） |
+| 状态 | 初稿保留；**实现以 game.js / HANDOFF 为准** |
 | 读者 | 产品 / 前端工程 |
 | 首发形态 | 浏览器 SPA，无构建（HTML / CSS / JS） |
 
@@ -497,4 +497,83 @@ stateDiagram-v2
 
 ---
 
-*文档结束 — v0.1 初稿 · 2026-09-22 · 状态：待评审*
+*初稿结束 — v0.1 · 2026-09-22；§14 现状对齐见下*
+
+
+---
+
+## 14. 现状对齐（相对初稿 · 20260926e）
+
+> 初稿（§1–13）保留为设计起点；**运行时数值与开关一律以 `game.js` + `docs/HANDOFF.md` 为准**。本节只记架构 / 模块 / 发版实况。
+
+### 14.1 文档与线上
+
+| 项 | 现状 |
+|---|---|
+| 线上正式版 | https://gosuquan.github.io/delta-stash-game/ · `version.json` = **20260926e** |
+| 线上测试版 | https://gosuquan.github.io/delta-stash-game/test/ · 同版本号；评测仅此 |
+| 交接 | `docs/HANDOFF.md`（游戏grok 每 2 小时刷新 ⑩；⑪ 商业化 / ⑫ 试玩分属其他 agent） |
+| 刷新节奏 | 技术/交接文档：**每 2 小时**（不再按 ~25 分钟） |
+
+### 14.2 仓库文件地图
+
+| 路径 | 说明 |
+|---|---|
+| `index.html` / `style.css` / `game.js` / `audio.js` / `platform.js` | 正式版（公开）SPA；无构建 |
+| `version.json` | `{ "version": "YYYYMMDDx" }`；结算后拉取做更新提示 |
+| `test/*` | **生成物**，勿手改；`node tools/build-test.js` 从根目录生成 |
+| `tools/build-test.js` | 正式→测试：翻 `EVAL_ALLOWED`/`BUILD_ENV`、storage 键加 `test_`、注入 `tools/test-only/*` |
+| `tools/test-only/` | 评测 DOM（`eval-markup.html`）+ 文案（`eval-strings.json`）；**只进 /test/** |
+| `tools/ui_drag_check.js` | 浏览器端全量拖拽扫描（不进 `npm test`） |
+| `tools/analytics/` | 埋点接收端（Cloudflare Worker/D1；`ENDPOINT` 现为空） |
+| `tests/*.test.js` | Node 回归（jsdom）；`npm test` |
+| `docs/sim/` | 经济模拟结果 |
+
+### 14.3 逻辑模块（仍单文件 `game.js`）
+
+| 模块（逻辑分区） | 内容 |
+|---|---|
+| 常量 / 经济表 | `CRATE_TIERS` · `HONEYMOON` · `AUCTION_HALL_CFG` · `EXPAND_CASH_COSTS` · `OPEN_MILESTONE_CFG` · `ITEM_DEFS`（129） |
+| Feature flags | `FEATURES`：`EVAL_ALLOWED` / `BUILD_ENV` / `ADS_ENABLED` / `IAP_*` / `ANALYTICS_ENABLED` … |
+| 掉落与揭示 | 加权抽稀有度 → 物品；顺序揭示；**点击解密**门闩 |
+| 装箱 | 异形 footprint、旋转、触屏抬高拖影、冲突只拒新品 |
+| 结算 / 版本 | 空柜退租、完美装箱、版本条（`version.json`） |
+| 商业化 stub | 广告位 / IAP SKU / `logMono`；Pages 广告与真钱价默认关 |
+| 埋点 | `track()` → localStorage 队列；评测污染 `eval_tainted` |
+| 门户 | `platform.js`：`supportsRewarded` / `supportsPayments` |
+
+### 14.4 关键数据结构（存档）
+
+- 键：正式 `deltaStashSave`；测试 `test_deltaStashSave`（及其它 `deltaStash*` / `auctionHelpSeen` 同理加前缀）。
+- 关键字段：现金、场次、仓库 `placed`、暂存、`ownedGridMax`、厅解锁、蜜月/每日/里程碑进度、`evalTainted`、图鉴、特效模式等（以 `saveGame`/`loadGame` 为准）。
+
+### 14.5 测试与模拟
+
+| 套件 | 覆盖 |
+|---|---|
+| `crate_milestones` | 全柜×厅×里程碑×折扣；0 件退租 |
+| `version_check` | `?v=`×4 / `version.json` / `BUILD_VERSION`；更新条行为 |
+| `ads_off` / `iap_off` | 关广告无「广告」字样；无 `$` 真钱价 |
+| `expand_cost` | 分级扩容扣费 / 下拉锁 / 存档永久 |
+| `analytics` | 事件字段、`eval` / 开关 |
+| `ui_shapes` | 24 形 × 4 朝向放入/拖出/存档重载 |
+| `launch_j` | 格子渲染、厅提示、触屏、评测污染、正式/测试隔离 |
+| `header_menu` | 顶栏 ⋯ 菜单 |
+| sim | `docs/sim/results.md`（稳健档节奏、蜜月/厅比值） |
+
+### 14.6 发版流程（摘要）
+
+1. 改版本号：`index.html` 四个 `?v=` + `version.json` + `BUILD_VERSION`  
+2. `node tools/build-test.js` 重生 `test/`  
+3. `npm install && npm test`（含 `build-test --check`）  
+4. 不提交 `package-lock.json`；`git pull --rebase` 后**只推一次**  
+5. 确认 Pages `built`；curl 正式 + 测试两个 `version.json`  
+6. 无头核对：正式无评测、`/test/?eval=1` 有评测  
+
+### 14.7 未合入（分支）
+
+- `origin/hall-crates-b1`：拍卖厅专属柜批次 1（杂货 / 夜班 / 双联）。等商业化模拟放行后合 main。
+
+---
+
+*现状对齐追加 — 20260926e · 2026-10-02 · 游戏grok*

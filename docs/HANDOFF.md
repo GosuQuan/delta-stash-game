@@ -15,7 +15,7 @@
 |---|---|
 | 开箱爽感 + 装箱脑力 | 四档柜 × 十档品级（白→大红，含粉/炎金）× 默认 5×5 高压装箱 |
 | 短局可重复 | 单场约 2–5 分钟；结算特效默认「流畅」，可切「华丽」 |
-| 前期友好、中后期上瘾 | 蜜月 5 场 / 现金 ¥4.5 万截止；中场拍卖厅 **18 万 / 28 万 / 40 万** |
+| 前期友好、中后期上瘾 | 蜜月 5 场 / 现金 ¥3.5 万截止；中场拍卖厅 **18 万 / 28 万 / 40 万** |
 | 轻商业化占位 | 广告/IAP 全 stub；试玩默认 `FEATURES.ADS_ENABLED = false` |
 | 零构建可分发 | `index.html` + `style.css` + `game.js` + `audio.js`，itch zip 根目录即玩 |
 
@@ -33,7 +33,7 @@
 |---|---|
 | 四档货柜 + 硬切割货池 | ✅ 普通 / 精选 / 密封 / 限时豪华 |
 | 异形装箱 / 扩容 5→6→7→8 | ✅；现金扩容（永久，分级）`EXPAND_CASH_COSTS` = 6×6 ¥40,000 / 7×7 ¥120,000 / 8×8 ¥300,000（合计 ¥460,000）；IAP 仅支付平台（`IAP_ENABLED`） |
-| 蜜月（新手保护） | ✅；`HONEYMOON.ROUNDS = 5` **或** `CASH_END = 45000`（先到先结束） |
+| 蜜月（新手保护） | ✅；`HONEYMOON.ROUNDS = 5` **或** `CASH_END = 35000`（先到先结束） |
 | 结算特效 | ✅；默认 **流畅**（`settleFxMode = "smooth"`）；顶栏可切华丽 |
 | 完美装箱 | ✅；利用率 ≥85% 或零弃货 → +10% 货值 & 下场租金 −12%（一次） |
 | 热手 / 冷手 | ✅；连盈/连亏 3 场特效；冷手软保底（不送大红） |
@@ -45,10 +45,13 @@
 | 鉴宝挑战 | ✅；`FEATURES.CHALLENGE_ENABLED = true` |
 | 一键整理 | ✅ stub；**每日免费 1 次**，其后 `$0.99` / 1 钥匙 |
 | 清算重整（破产） | ✅；**每日 1 次**；发放 **¥5,850**；无广告 |
-| 广告 | 代码保留；**`FEATURES.ADS_ENABLED = false`** |
-| 补给 IAP | ✅ stub；`FEATURES.IAP_SHOP_ENABLED = true` |
-| 本地存档 | ✅；`localStorage` 键 `deltaStashSave` |
-| 评测档 | ✅；`?eval=1` 或顶栏「评测」（见⑤） |
+| 广告 | 代码保留；Pages/本地 `platform.supportsRewarded()`=false → **ADS 关**；门户可开 |
+| 补给 IAP | ✅ stub；`IAP_SHOP_ENABLED` 仅 local；真钱价受 `IAP_ENABLED`（需 `supportsPayments`）闸门 |
+| 本地存档 | ✅；正式版键 `deltaStashSave`；测试版前缀 `test_`（同域不串档） |
+| 首局引导 | ✅；新档弹 onboarding（选柜→开箱→装箱→结算） |
+| 点击解密揭示 | ✅；开箱后逐件点按揭晓（名称/稀有度/价值在解密前隐藏） |
+| 正式版 / 测试版 | ✅；根目录正式（`EVAL_ALLOWED=false`，公开源码零评测 DOM/文案）；`/test/` 由 `tools/build-test.js` 注入 |
+| 评测档 | ✅ **仅测试版**；`/test/?eval=1`（见⑤）；正式版 `?eval=1` 无效 |
 | 金色描边（身份） | ✅；当前厅 ≥ **翡翠** **或** 生涯峰值现金 ≥ **¥250,000**；作用于品牌标与现金 HUD |
 
 ---
@@ -139,14 +142,18 @@
 ### Feature flags（`FEATURES`）
 
 ```js
-ADS_ENABLED: false           // 试玩关闭激励视频 UI
+EVAL_ALLOWED: false          // 正式版关死；/test/ 生成时改 true
+BUILD_ENV: "public"          // /test/ → "test"（埋点 build/econ/env）
+ADS_ENABLED: platform.supportsRewarded()  // Pages/本地 false；门户可 true
 CHALLENGE_ENABLED: true
-IAP_SHOP_ENABLED: true
+IAP_SHOP_ENABLED: local only // 门户不露假购买
+IAP_ENABLED: platform.supportsPayments()  // 无支付平台则永不显示 $ 价
 KEYS_ENABLED: true
-ORGANIZE_STUB_ENABLED: true
+ORGANIZE_STUB_ENABLED: local only
+ANALYTICS_ENABLED: true      // ENDPOINT 空＝只写本机队列
 ```
 
-翻 `ADS_ENABLED = true` 即可恢复广告芯片 / 日 cap UI，无需删代码。
+Pages 试玩广告默认关；门户翻 `supportsRewarded` 即可恢复广告芯片 / 日 cap UI，无需删代码。
 
 ### 广告位 id（`AD_PLACEMENTS`，stub）
 
@@ -198,7 +205,7 @@ python3 -m http.server 8765
 ### 发版清单（每次发版必做）
 
 - 每次发版：`?v=` ×4（`index.html` 里 style.css / platform.js / audio.js / game.js）+ 根目录 `version.json` + `game.js` 的 `BUILD_VERSION` 一起改成同一个版本号，然后 `npm test`（`tests/version_check.test.js` 会校验三处一致，不一致就挂）。
-- **正式版 + 测试版同版本、一次推送（20260926d 起）**：根目录是正式版（评测 / 数据 / `?eval=1` / `?ball` / `?soft` / `?mono=1` 全部关死，唯一开关是 `game.js` 里 `FEATURES.EVAL_ALLOWED = false`）；`/test/` 是测试版，由 `tools/build-test.js` 从根目录文件生成，只差 `EVAL_ALLOWED=true`、`BUILD_ENV="test"`、localStorage / sessionStorage 键前缀 `test_`（同域名不串档）、标题 `[测试版]` + 右下角小标签。**只改根目录文件，不手改 `test/`。**
+- **正式版 + 测试版同版本、一次推送（20260926d 起；20260926e 起公开源码零评测痕迹）**：根目录是正式版（`FEATURES.EVAL_ALLOWED = false`，`BUILD_ENV="public"`；`?eval=1` / `?ball` / `?soft` / `?mono=1` 无效）。**评测面板 DOM、⋯ 菜单「评测/数据」、mono 调试条、以及 `EVAL_STR` 文案不在公开源码里**——只在 `node tools/build-test.js` 生成 `/test/` 时从 `tools/test-only/eval-markup.html` + `eval-strings.json` 注入。`/test/` 另改 `EVAL_ALLOWED=true`、`BUILD_ENV="test"`、storage 键前缀 `test_`、标题 `[测试版]` + 右下角小标签。**只改根目录文件，不手改 `test/`。**
 - 发版流程（每次都按顺序）：①改版本号（4 个 `?v=` + `version.json` + `BUILD_VERSION`）→ ②`node tools/build-test.js` 重新生成 `test/` → ③`npm install && npm test`（含 `node tools/build-test.js --check`：`test/` 与生成结果不一致就挂；另校验正式版 eval 全关、测试版 `?eval=1` 才有评测）→ ④删掉 `package-lock.json`（不提交）→ ⑤`git pull --rebase` 后**只推一次**（后一次推送会顶掉前一次的 Pages build，两次之间隔 3 分钟以上）→ ⑥确认 Pages build `built`，用 cache-buster curl **两个**地址的 `version.json`：`https://gosuquan.github.io/delta-stash-game/version.json` 和 `https://gosuquan.github.io/delta-stash-game/test/version.json`，都必须是新版本号 → ⑦无头浏览器过一遍线上（正式版 `?eval=1` 无评测控件、`/test/?eval=1` 有）。
 - 推 main 后确认 Pages build `built`，再用 cache-buster curl 线上 `index.html`（4 个 `?v=`）和 `version.json`。
 - 跑着 `20260925d` 及以后版本的老标签页，会在下一场结算后提示「有更新，刷新后继续」（c 及更早的标签页没有这段代码，不会提示）（不会自动刷新；开箱 / 揭示 / 装箱中不提示），点「刷新」先存档再刷新。
@@ -257,7 +264,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## 合并备注（给商业化）
 
-0. **密封柜 ¥30,000 / 限时豪华柜 ¥60,000 以代码为准**；群内旧口头租金作废。厅租金上浮维持 +5%～+16%，勿再加码。
+0. **密封柜 ¥30,000 / 限时豪华柜 ¥60,000 以代码为准**；群内旧口头租金作废。**厅租金上浮已全部为 0**（`rentMarkupPct: 0`，自 `?v=20260925d`）；勿再按旧 +5%～+16% 口径加码。金红权重见 ③。
 
 
 1. 改变现只动 `FEATURES` / `AD_*` / `IAP_SKUS`，不要改蜜月与厅阶梯 unless 重平衡。  
@@ -267,11 +274,13 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ---
 
-## ⑩ 冲刺日志（每 ~25 分钟刷新）
+## ⑩ 冲刺日志（每 2 小时刷新）
 
-> 最近更新：2026-10-02 Asia/Shanghai · 负责人：游戏grok（20260926d 上线前一轮）
+> 最近更新：2026-10-02 14:00 Asia/Shanghai · 负责人：游戏grok · 线上 `version.json` = **20260926e**（Pages 正式版 + `/test/` 均已确认）
 
 ### 本轮已交付
+- **公开版零 eval 痕迹（`?v=20260926e`，`2b2d43c`）**：**数值 / 广告 / 内购未动。** 在 d 的正式版/测试版拆分之上，把评测面板标记、⋯ 菜单评测项、mono 调试条、以及 `EVAL_STR` 文案全部移出公开源码；只在 `tools/build-test.js` 生成 `/test/` 时从 `tools/test-only/eval-markup.html` + `eval-strings.json` 注入。`npm test` 含 `build-test --check` + `launch_j`：正式版源码与线上根目录无「评测」字样，`/test/?eval=1` 才有评测控件。线上 curl：`version.json` 与 `test/version.json` 均为 `20260926e`。
+- **首局引导 + 点击解密揭示（`d726780` / `b9a9d7f`，随 20260926c+ 已在线上）**：新档 onboarding 弹层；开箱后逐件点按揭晓（解密前不露名称/稀有度/价值）。
 - **上线前一轮（`?v=20260926d`，正式版 + 测试版同版本一次推送）**：**数值没动，广告 / 内购保持关闭。**
   - 修「异形物件放进仓库后图标消失、拖不动」：根因是图标和拖拽把手只画在包围盒左上角 (0,0) 那一格，而 J / S / plus / cross 本身以及旋转后的 L / L2 / T / Z / skew / stair / hook / corner / bigL 的 (0,0) 是**空格**。现在图标放在「最靠近包围盒中心的已占格」，每个已占格都是把手。物件一直在 `placed` 里，结算按 `placed` 算，没丢；只有「拖到半空时存档 / 结算」会丢——已修（拖拽中的物件按原位置进存档，结算前先取消拖拽）。迷你形状改成单一形状源（卡片 / 拖影 / 落位高亮 / 占格同一份，含旋转）。
   - 转运仓库格子线所有布局都画（原来手机空仓像一块黑板）；全局 `[hidden]{display:none !important}`，修拍卖厅提示卡在「距青铜还差 ¥25,000」；触屏 touchmove 改一个常驻非被动监听、仅 `cancelable` 时 `preventDefault`，网格空闲时不再 `touch-action:none`（消除 Console 警告）。
@@ -304,22 +313,24 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
   - 回归：`tests/crate_milestones.test.js`（`npm test`）全柜×全厅×开箱里程碑×折扣（含蜜月）——588 开 / 5094 断言通过；旧 v=a 限时里程碑路径挂 228。
 - **经济模拟第 2 轮**（`680892f`）：`docs/sim/results.md` 只动蜜月试算；蜜月后货池与第 1 轮一致。建议把「到 ¥8 万 35–50 场」改用**稳健档**判定（中位 39 场 ✅）；保守档全押密封仍偏快（27 场），调蜜月推不动。（已随 `?v=20260925d` 上线，见上。）
 - **既有交付仍有效**：`6d25bf1` 垫底货补发、`13942c8` 华丽回放可跳过、`bc4f5b8` 空间紧张（≥0.6）、Pages https://gosuquan.github.io/delta-stash-game/ 、门户 `platform.js`、精选 `fee=13800` / 蜜月 UI ¥11,050、开箱灰保护、PC 可滚、窄屏 staging、评测 sheet、蜜月 5 场/¥35k、跟随球鉴宝。
-- **数值核对（以 `game.js` 为准）**：启动 ¥15,000；柜租 4500 / **13800** / 30000 / 60000；蜜月 ROUNDS=5 · CASH_END=35000 · FEE_MULT 0.70/0.80；厅峰 4万/8万/**18万/28万/40万**（租金上浮全 0，金红 +3%/+4%/+4%/+4%/+4%）；`BUILD_VERSION=20260925d`；物品表 **129**；`JACKPOT_CHANCE=0.12`；重整 ¥5,850；`ORGANIZE_DAILY_FREE_QUOTA=1`；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`（Pages 免广告）。
-
+- **数值核对（以 `game.js` 为准）**：启动 ¥15,000；柜租 4500 / **13800** / 30000 / 60000；蜜月 ROUNDS=5 · CASH_END=35000 · FEE_MULT 0.70/0.80；厅峰 4万/8万/**18万/28万/40万**（租金上浮全 0，金红 +3%/+4%/+4%/+4%/+4%）；`BUILD_VERSION=20260926e`；物品表 **129**；`JACKPOT_CHANCE=0.12`；重整 ¥5,850；`ORGANIZE_DAILY_FREE_QUOTA=1`；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`（Pages 免广告）。
 ### 进行中
-- 游戏侧：经济重调已上线（`?v=20260925d`）；待命下一项（路线图柜型）。
-- 阻塞：本机 Windows / Mac 副本均 offline（`DESKTOP-EC6TT58`、`mima0000deMacBook-Pro.local`），本轮无法同步 `C:\Users\admin\delta-stash-game\docs\HANDOFF.md`。
+- 游戏侧：线上停在 **20260926e**；专属厅柜批次 1 在分支 `origin/hall-crates-b1`（`9f0db02`：杂货柜 / 夜班柜 / 双联柜 + 每日次数 + 「更多柜子」+ 评测重置今日次数），**未合 main、未上线**——等模拟表进群 + 游戏商业化放行（见 ⑪）。
+- 下一小改（不单独立 release）：顶栏图标按钮补 `aria-label`（图鉴等；流畅 / 音效 / 帮助 / 更多已有）——游戏商业化上架截图要求。
+- 上架截图：须用**正式版**公开页（无测试黄标 / 无评测字样），新档或约 ¥8 万存档。
+- 阻塞：本机 Windows / Mac 副本若 offline，不影响本仓 GitHub 文档推送。
 
 ### 下一里程碑（商业化已立项）
-- ~~`?v=20260925c` 空柜/退租复验通过 → 经济重调合入 `main`~~（经济重调已随 `?v=20260925d` 上线；空柜复验照旧在 d 上做）
-- 路线图柜型（夜班柜 → 双联柜 → 命运柜等，见 ⑪）；百万以后不加爆率
-- itch.io 免费评测包（等少权协助登录 / Cloudflare）
+- 专属厅柜批次 1（青铜杂货 / 翡翠夜班 / 白银双联）模拟放行 → 合 main → 实测闭环 → 批次 2（铂金古董 / 赤金命运）
+- 顶栏 `aria-label` 补齐（随下一有内容的 release 带上即可）
+- itch.io 免费评测包（等少权协助登录 / Cloudflare）；百万以后不加爆率（路线图见 ⑪）
 
 ### 测试请验
-1. **限时空柜 / 退租（`?v=20260925c`；先整页刷新或新开标签，Console 确认 `game.js?v=20260925c` 后再开局——旧标签页会继续跑旧脚本）**：用保留的第35次里程碑存档开限时（有无折扣）应 ≥1 件可装箱；清档后复测第20次里程碑限时；不应再出现付满租开 0 件；若极端 0 交付，结算须**全额退实付租金**（含厅加价与折扣后）。对照 `docs/playtest-shots/line6-limited-fix/`。
-2. **结算弹层残留行**：完美装箱/折扣隐藏时不应再留空行（v=c 强刷确认，对照 `bug-stale-settle-lines.png`）。
-3. **经济重调 / 版本提示（`?v=20260925d`）**：新标签页开局，普通柜蜜月价 ¥3,150、精选 ¥11,050，拍卖厅详情不再显示租金上浮；版本提示要等下一次发版才能在线上看到（c 版标签页没有提示代码）：下次发版时保留一个 d 版老标签页，打完一场结算后底部应出现「有更新，刷新后继续」，开箱 / 揭示 / 装箱过程中不应出现；点「刷新」后存档（现金 / 场次）保持不变。在那之前以 `tests/version_check.test.js` 为准。
-4. （可选）本地 `npm install && npm test` 应全绿（两套测试）；华丽跳过 / 柜差体感维持 line5-fx、line4-tiers 结论即可。
+1. **正式版 / 测试版隔离（`?v=20260926e`）**：正式版 https://gosuquan.github.io/delta-stash-game/ 强刷后页面与源码均无「评测」；`?eval=1` 无评测控件。测试版 https://gosuquan.github.io/delta-stash-game/test/?eval=1 有评测面板 / 数据；存档与正式版互不串。
+2. **异形拖拽（d 起）**：J / S / plus / cross 及旋转后的 L/T/Z 等放入仓库后图标可见、可再拖出；结算货值按 `placed` 不错账。
+3. **限时空柜 / 退租**：在测试版强刷后用里程碑 20/35 × 有无折扣复测（正式版无评测重置次数时可跨日）；0 件须全额退实付租金。
+4. （可选）本地 `npm install && npm test` 应全绿（九套：`crate_milestones` / `version_check` / `ads_off` / `iap_off` / `expand_cost` / `analytics` / `ui_shapes` / `launch_j` / `header_menu`）。
+
 
 ## ⑪ 商业化验收日志（每 2 小时迭代）
 
