@@ -391,9 +391,9 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑫ 试玩日志（测试玩家 · 每 ~25 分钟）
 
-> 最近更新：2026-10-02 12:35 Asia/Shanghai · 负责人：游戏测试玩家  
-> 当前线上版本：`version.json` = **20260926c**（Pages 与本地一致；本轮 WebFetch 确认）  
-> 截图：`docs/playtest-shots/line1-retest2/`、`docs/playtest-shots/line-followball/`、`docs/playtest-shots/line3-narrow/`（含 `v2-*.png`）、`docs/playtest-shots/line2-mid/`、`docs/playtest-shots/line2-verify-0925/`、`docs/playtest-shots/line2-tight-bc4f/`、`docs/playtest-shots/line2-tight-online/`、`docs/playtest-shots/line4-tiers/`、`docs/playtest-shots/line5-fx/`、`docs/playtest-shots/line6-limited-fix/`（含 `08-console-v-c.png`）、`docs/playtest-shots/line7-g-mobile/`（01–12、14–16；本机 gitignore，勿提交 PNG）
+> 最近更新：2026-10-02 14:36 Asia/Shanghai · 负责人：游戏测试玩家  
+> 当前线上版本：`version.json` = **20260926f**（本轮 cache-buster curl：正式版 + `/test/` 均为 `20260926f`；`index.html` 四处 `?v=20260926f`）  
+> 截图：`docs/playtest-shots/line1-retest2/`、`docs/playtest-shots/line-followball/`、`docs/playtest-shots/line3-narrow/`（含 `v2-*.png`）、`docs/playtest-shots/line2-mid/`、`docs/playtest-shots/line2-verify-0925/`、`docs/playtest-shots/line2-tight-bc4f/`、`docs/playtest-shots/line2-tight-online/`、`docs/playtest-shots/line4-tiers/`、`docs/playtest-shots/line5-fx/`、`docs/playtest-shots/line6-limited-fix/`（含 `08-console-v-c.png`）、`docs/playtest-shots/line7-g-mobile/`、`docs/playtest-shots/launch-j/`（~13:05–13:06）、`docs/playtest-shots/line8-d/`（~13:15–14:04）、`docs/playtest-shots/line9-f/`（~14:20–14:36）（本机 gitignore，勿提交 PNG）
 
 ### 已测线路
 | 线路 | 状态 | 备注 |
@@ -408,22 +408,25 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | 「空间紧张」bc4f 本地补踩（line2-tight-bc4f） | ⚠️ 作废 | 本地旧 `game.js` 缓存；以线上为准 |
 | 「空间紧张」线上 Pages 复踩（line2-tight-online） | ✅ 通过 | ≥约 15 格弹、较小不弹；`aee6a72` 版本号防缓存 |
 | 结算华丽 vs 流畅（line5-fx） | ✅ 本轮已推 | 流畅≈0.2s 无回放；华丽≈1.8s 有高光回放、无卡顿、刷新后记住模式；建议保留流畅默认 |
-| 限时空柜复验（line6-limited-fix · b→c 已确认 / d+ 待踩） | 🔄 待复测 | b 上第20次里程碑空箱未退租✗已证；**14:13 Console 确认 Pages 曾跑 `?v=20260925c`**（`08-console-v-c.png`）；保留档场次24·现金¥168,397·白银厅·下一柜−12%，但「今日限时次数已用完」；里程碑35/20 空柜复测**尚未开踩**；现线上已是 **`?v=20260926c`**，line7 未覆盖空柜/退租，仍待强刷复测 |
+| 限时空柜复验（line6-limited-fix · b→c 已确认 / d+ 待踩） | 🔄 待复测 | b 上第20次里程碑空箱未退租✗已证；**14:13 Console 确认 Pages 曾跑 `?v=20260925c`**（`08-console-v-c.png`）；保留档场次24·现金¥168,397·白银厅·下一柜−12%，但「今日限时次数已用完」；里程碑35/20 空柜复测**尚未开踩**；现线上已是 **`?v=20260926f`**，line7–line9 截图**未见**限时里程碑空柜/退租场面，仍待强刷复测 |
 | g 版手机布局 / 去美元价 / 扩容锁（line7-g-mobile） | ✅ 本轮已推 | 390/360 装箱网格铺满；拖影可见浮于格上；一键整理无 `$`；扩容 6×6 ¥40,000 / 7×7 ¥120,000 / 8×8 ¥300,000；现金购 6×6 后刷新仍 6×6；非评测下拉未拥有尺寸带 🔒；新档蜜月普通¥3,150 / 精选¥11,050；截图时 Console 曾见 `?v=20260925g`（手机段）与 `?v=20260925i`（下拉锁段） |
-| 冲资金 ~30 万 | ⏳ 未到 | line7 续玩档约 ¥17.8万（场次34）；未冲到赤金门槛 |
-| 专属厅柜批次1（青铜杂货 / 翡翠夜班 / 白银双联） | ⏳ 未开踩 | line7 截图未见专属柜 UI / 租金表 |
+| launch_j 对照截图（launch-j · ~13:06） | ✅ 本轮已推（对照 d 请验） | 正式版/测试版各有 fresh·header(360/390/412)·more-menu·broken-items-in-grid·card-vs-highlight；测试版另有 `test-eval*.png` / `test-eval-more-menu-390`（⋯ 含「评测面板」）；正式版顶栏未见评测入口（`public-header-*`）。文件名示意测格子渲染/卡片vs高亮；**是否完全无残影待肉眼细读** |
+| 正式/测试拆分 + 顶栏 + 异形 L（line8-d · d→e） | ✅ 本轮已推 | Console：`A1-public-e-console` / `A1-old-save-e-console` 正式版 `game.js?v=20260926e` 且 `?eval=1` 无评测控件；`B-version-e-console` 测试版标题 `[测试版]` + `?v=20260926e`；`B3-analytics-e-console` 埋点 `build=20260926e-test`。`C-topbar-{360,390,412}`（及 `*-nomenu`）顶栏收纳；`C-shape-L` / `C-shape-L-incognito` L 形物件在格内可见图标（对照 d 异形修复）。老档续玩见场次34·白银厅（`A1-old-save-e`） |
+| f 版欢迎名 / 旋转场景 / plus 触屏（line9-f） | 🔄 部分入档 | `A1-public-welcome` 欢迎弹窗 kicker 可见 **STASH AUCTION**；`A2-360`/`A2-390` 手机宽选柜；`A3-*-rotation4` 文件名示意旋转 4 次场景（开箱暂存/装箱界面，**是否每次恰好 90° 未见连点对照，待解读**）；`A4-public-refresh` 正式版刷新后续玩；`B-plus-desktop`/`B-plus-390-touch` plus/十字形触屏装箱（`B-plus-390-touch` 带「测试版·存档独立」标签）。本轮 curl 时线上已是 **f** |
+| 冲资金 ~30 万 | ⏳ 未闭环 | line7 续玩档约 ¥17.8万；`line9-f/B-plus-390-touch` 测试版画面现金约 ¥30万+ / 铂金厅（评测/测试口径，**非**稳健档自然冲刺证据） |
+| 专属厅柜批次1（青铜杂货 / 翡翠夜班 / 白银双联） | ⏳ 未开踩 | 新截图柜列表仍为普通/精选/密封（±限时）；未见专属柜 UI（⑩ 记 `hall-crates-b1` 未合 main） |
 
 ### 评测 6 问进度
-1–3 可写：开局/装箱顺；窄屏已翻；柜差租金台阶与「密封起开始赌」体感已立（line4-tiers）；line7 补手机 390/360 装箱可读可拖。4 贵货：强制路径已摸到，自然触发仍弱。5 华丽已比完（line5-fx：流畅默认、华丽可跳过）。6 冲资金未到（续玩档约 ¥17.8万，目标 ~30万）。
+1–3 可写：开局/装箱顺；窄屏已翻；柜差租金台阶与「密封起开始赌」体感已立（line4-tiers）；line7 补手机 390/360 装箱可读可拖；line8/line9 补正式·测试隔离与欢迎名 STASH AUCTION。4 贵货：强制路径已摸到，自然触发仍弱。5 华丽已比完（line5-fx：流畅默认、华丽可跳过）。6 冲资金未闭环（自然稳健口径未到；测试版有高现金截图不可算过）。
 
 ### 新 bug / 体验点
 1. ~~窄屏装箱：暂存区隐藏 / 货品不显示~~ → **v2 已过**。
-2. **评测 UI 形态**（降级）：可再开已验；叠层是否算「底栏 sheet」待产品确认。
+2. **评测 UI 形态**（降级）：可再开已验；叠层是否算「底栏 sheet」待产品确认。d 起评测仅 `/test/?eval=1`（line8 Console / launch-j 测试版菜单已见「评测面板」）。
 3. ~~**「空间紧张」写死误报 + 高货量门控**~~ → ✅ 线上整条收（`line2-tight-online/`）。
 4. **蜜月后现金门槛**（仍开）：无评测加钱时密封/跟随球难自然出现。
-5. **限时豪华柜里程碑空箱（仍待复测）**：白银厅限时付 ¥66,000 / 0 件（`line4-tiers/05-worst.png`）；`?v=20260925b` 复验第20次里程碑（钥匙碎片+折扣路径）付≈¥58,100 仍 0 件、结算扣满租未退（`line6-limited-fix/bug-milestone-no-loot-no-refund.png` + `00-round20-log.png` + `05-console-version.png`）。`6d72e10` / `?v=20260925c` 已上退租兜底+自动测试；**14:13 已截 Console 确认 c 戳**（`08-console-v-c.png`），但第35次里程碑限时复测未开踩（保留档「今日限时次数已用完」）。现 Pages 已是 **`?v=20260926c`**；line7 未开限时里程碑，**空柜/退租仍待真机复测**（若当日限时用尽需跨日或评测重置次数）。
+5. **限时豪华柜里程碑空箱（仍待复测）**：白银厅限时付 ¥66,000 / 0 件（`line4-tiers/05-worst.png`）；`?v=20260925b` 复验第20次里程碑（钥匙碎片+折扣路径）付≈¥58,100 仍 0 件、结算扣满租未退（`line6-limited-fix/bug-milestone-no-loot-no-refund.png` + `00-round20-log.png` + `05-console-version.png`）。`6d72e10` / `?v=20260925c` 已上退租兜底+自动测试；**14:13 已截 Console 确认 c 戳**（`08-console-v-c.png`），但第35次里程碑限时复测未开踩（保留档「今日限时次数已用完」）。现 Pages 已是 **`?v=20260926f`**；line7–line9 **未开**限时里程碑空柜场面，**空柜/退租仍待真机复测**（若当日限时用尽需跨日或测试版评测重置次数）。
 6. **结算面板旧行残留**（次要）：`bug-stale-settle-lines.png` 仍见 CSS 已修的空行，疑标签页旧缓存；强刷复测时顺带确认。
-7. 开箱灰 / 中盘结算链路本轮 **无新阻塞**；line7 g 版手机段未见硬阻塞。
+7. 开箱灰 / 中盘结算链路本轮 **无新阻塞**；line7 g 版手机段未见硬阻塞；line8/line9 未见新硬阻塞（旋转「恰好 90°」仅有场景截图、缺连点对照）。
 
 ### 验收状态建议（给商业化对照 ⑪）
 | 项 | 建议 |
@@ -433,22 +436,27 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | 窄屏装箱沉浸 / PC·移动复验 | **建议改 ✅**（`line3-narrow/v2-*.png` + line7 390/360） |
 | 贵货守住 / 跟随球 | 仍 ⏳→🔄；玩法可达，优先补自然经济样本 |
 | 「空间紧张」文案 | ✅ 整条收 |
-| 评测 UI（底栏 sheet） | 建议 🔄→偏 ✅ |
+| 评测 UI（底栏 sheet） | 建议 🔄→偏 ✅；d/e 起改走 `/test/?eval=1`（launch-j / line8 已对照） |
 | 柜差体感（普通→精选→密封→限时） | **建议 ✅**（line4-tiers；⑩「测试请验」1 可勾） |
 | 华丽结算对比 | **建议 ✅**（line5-fx；流畅默认 + 华丽可跳过已验；⑩「测试请验」2 可勾） |
 | g 版手机格子 / 拖影 / 去美元价 | **建议 ✅**（line7-g-mobile；390/360 网格铺满、拖影可见、整理无 `$`） |
 | 扩容分级价 + 下拉锁 | **建议 ✅**（line7：确认框 ¥40,000→6×6、购后刷新仍 6×6；非评测 🔒；评测可自由切） |
-| 限时空柜空箱 / 退租兜底 | **🔄 修复已上（c→现 20260926c）待真机复测**；里程碑 20/35 × 折扣尚未开踩 |
-| 中盘经济体感 | 🔄 样本续积；继续冲赤金 / ~30万 |
+| 正式版 / 测试版隔离（d/e） | **建议 ✅**（line8 Console：正式 `?eval=1` 无评测控件；测试 `[测试版]` + 评测面板；launch-j 双端对照） |
+| 异形 L / plus 图标落格（d） | **建议 ✅ 偏通过**（`line8-d/C-shape-L*`；`line9-f/B-plus*`；细读残影可再补） |
+| 欢迎弹窗公开名 STASH AUCTION（f） | **建议 ✅**（`line9-f/A1-public-welcome.png`） |
+| 旋转每次恰好 90°（f） | **🔄 有场景截图、缺连点对照**（`A3-*-rotation4`） |
+| 限时空柜空箱 / 退租兜底 | **🔄 修复已上（c→现 20260926f）待真机复测**；里程碑 20/35 × 折扣尚未开踩 |
+| 中盘经济体感 | 🔄 样本续积；继续冲赤金 / ~30万（自然口径） |
 | 经济重调 / 蜜月价（d+） | 🔄 部分：line7 新档见普通蜜月租 **¥3,150**、精选 **¥11,050**、蜜月上限 ¥35,000·场次 1/5（`14-new-save.png`）；稳健档打到 8 万 / 专属厅柜批次1 **未开踩** |
-| 专属厅柜批次1 | ⏳ 未开踩 |
+| 专属厅柜批次1 | ⏳ 未开踩（未合 main） |
 
 ### 进行中 / 待测
-- **空柜/退租复测**（阻塞项延续）：在 `?v=20260926c` 强刷后测里程碑 35/20 × 有无折扣；限时次数用尽时需跨日或评测重置。
-- **稳健档打到 ¥8 万**（不加钱、≤40% 现金）：line7 未按该口径开踩。
-- **冲资金 ~30 万** / 自然贵货样本。
-- **专属厅柜批次1**：青铜杂货柜 / 翡翠夜班柜 / 白银双联柜（每柜≥5 场记租金·件数·丢弃·货值·净额；两道闭环题）。
-- **评测「重置今日限时次数」按钮**（记忆中待 grok）：截图未见该按钮，限时用尽仍卡复测。
+- **空柜/退租复测**（阻塞项延续）：在 `?v=20260926f` 强刷后测里程碑 35/20 × 有无折扣；限时次数用尽时需跨日或测试版评测重置。
+- **旋转恰好 90°**：补连点 4 次前后对照（line9-f 仅有场景帧）。
+- **稳健档打到 ¥8 万**（不加钱、≤40% 现金）：line7–line9 未按该口径开踩。
+- **冲资金 ~30 万** / 自然贵货样本（勿把测试版高现金截图算闭环）。
+- **专属厅柜批次1**：青铜杂货柜 / 翡翠夜班柜 / 白银双联柜（每柜≥5 场记租金·件数·丢弃·货值·净额；两道闭环题）——等合入 main 再踩。
+- **评测「重置今日限时次数」按钮**：依赖专属柜/测试版评测能力；限时用尽仍卡空柜复测。
 
 ### 试玩日志
 - **2026-09-23 03:06** · line1-retest2：蜜月约 3/5，现金 ¥20,924，盈亏 +¥8,524；开箱装箱结算正常；占用 28% 仍「空间紧张」。
@@ -470,4 +478,17 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
   - **扩容价与购后持久**（`07`–`08`、`10`–`12`）：评测面板列永久扩容 **6×6 ¥40,000 / 7×7 ¥120,000 / 8×8 ¥300,000**；确认框「花费 ¥40,000 永久扩容至 6×6」；另档现金 ¥115,000→购后 ¥75,000、容量 0/36、toast「扩容成功 -> 6x6」、扩容键改标「扩容 ¥12万」；**刷新后仍为 6×6 / ¥75,000**（`12-after-reload`）。广告文案见「强制关闭 / ADS_ENABLED=false」。
   - **下拉锁**（`09`、`15`–`16`）：非评测新档（Console 曾见 `game.js?v=20260925i`）仓库下拉 **5×5 可选，6×6/7×7/8×8 均带 🔒**；`16` 画面仍停在 5×5+锁（未见未购解锁）。评测档文案写明可自由切换尺寸。
   - **新档蜜月价**（`14-new-save`）：清档后现金 ¥15,000·5×5·蜜月进行中 1/5·现金上限 ¥35,000；普通柜 **¥3,150**、精选 **¥11,050**；密封带锁；「整理 今日免费」「扩容 ¥4万」。
-  - **未覆盖**：限时里程碑空柜/退租、稳健档打到 8 万、冲 30 万、专属厅柜批次1、评测「重置今日限时次数」。续玩档限时仍见「今日限时次数已用完」（`09`）。现线上已确认 **`?v=20260926c`**（非截图当时的 g/i 戳）。6 问仍约 1–3 可写、5 已比完、4 自然仍弱、6 未到。
+  - **未覆盖**：限时里程碑空柜/退租、稳健档打到 8 万、冲 30 万、专属厅柜批次1、评测「重置今日限时次数」。续玩档限时仍见「今日限时次数已用完」（`09`）。截图当时线上曾确认 **`?v=20260926c`**（非截图当时的 g/i 戳）。6 问仍约 1–3 可写、5 已比完、4 自然仍弱、6 未到。
+- **2026-10-02 ~13:05–13:06** · launch-j（对照 ⑩ launch_j / d 正式·测试拆分；截图 `docs/playtest-shots/launch-j/`）：正式版与测试版并列截 `public-*` / `test-*`——fresh PC·390、header 360/390/412、more-menu 390、broken-items-in-grid PC·390、card-vs-highlight PC·390；测试版另有 `test-eval-pc` / `test-eval-390` / `test-eval-more-menu-390`（⋯ 菜单含「评测面板 / 新开档 / 清档」）。正式版 `public-header-*` 顶栏为图鉴/流畅/音效/帮助/更多，**无**「评测/数据」。未见限时里程碑空柜场面。
+- **2026-10-02 ~13:15–14:04** · line8-d（对照 d→e：正式/测试隔离、顶栏、异形 L；截图 `docs/playtest-shots/line8-d/`）：
+  - **版本 Console**：`A1-public-d-console`（较早 d 戳段）→ `A1-public-e-console` / `A1-old-save-e-console` 正式版 `game.js?v=20260926e`，`?eval=1` 时评测按钮/class 检查为无；`B-version-e-console` 测试版 `title` 含 `[测试版]`、`game.js?v=20260926e`；`B3-analytics-e-console` 见 `__analyticsLog.build=20260926e-test`。
+  - **老档 / 测试档画面**：`A1-old-save-e` 续玩白银厅·场次34；`A1-public-eval-e` / `B1-test-e` / `B2-test-e` / `B1-test-e-cash65000` 等为公开·测试对照帧。
+  - **顶栏**：`C-topbar-{360,390,412}` 与 `*-nomenu`——390 装箱中顶栏 ⋯ 含「新开档/清档」，工具行见旋转/整理今日免费/扩容¥4万/清空。
+  - **异形 L**：`C-shape-L` / `C-shape-L-incognito` 仓库内 L 形「航拍机零件」图标可见（对照 d 异形图标修复）。
+  - **未覆盖**：空柜退租、稳健 8 万、自然冲 30 万、专属厅柜。
+- **2026-10-02 ~14:20–14:36** · line9-f（对照 f：欢迎名 / 旋转 / plus；截图 `docs/playtest-shots/line9-f/`）：
+  - **欢迎名**：`A1-public-welcome` 弹窗顶部可见 **STASH AUCTION**（「今天捡漏，还是血亏？」+ 新手/老玩家双按钮）。
+  - **手机宽**：`A2-360` / `A2-390` 选柜界面（蜜月保护租普通¥3,150 / 精选¥11,050；扩容¥4万键可见）。
+  - **旋转场景**：`A3-390-rotation4` / `A3-1280-rotation4` 文件名示意旋转 4 次；画面为开箱暂存+转运仓库（含未鉴定物件「点击揭晓」），**未见四次点击前后对照，恰好 90° 结论待补**。
+  - **刷新 / plus**：`A4-public-refresh` 正式版续玩装箱；`B-plus-desktop` / `B-plus-390-touch` plus/十字形物件触屏落格（390 帧带「测试版·存档独立」，现金约 ¥30万+ / 铂金厅——**测试口径，不计入自然冲 30 万**）。
+  - **线上**：本轮交接 curl 正式版与 `/test/version.json` 均为 **20260926f**（较截图时段的 e 又升一档）。空柜里程碑 / 稳健 8 万 / 专属柜仍未踩。
