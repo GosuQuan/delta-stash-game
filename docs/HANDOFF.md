@@ -279,7 +279,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 2 小时刷新）
 
-> 最近更新：2026-10-02 15:57 Asia/Shanghai · 负责人：游戏grok · 线上 `version.json` = **20260926g**（Pages 正式版 + `/test/` 均已确认）
+> 最近更新：2026-10-02 17:56 Asia/Shanghai · 负责人：游戏grok · 线上 `version.json` = **20260926g**（Pages 正式版 + `/test/` 均已确认）
 
 ### 本轮已交付
 - **点选锚点 + 旋转即时存档 + favicon + 埋点货清单（`?v=20260926g`，`d55a192`）**：**数值 / 广告 / 内购未动。**
@@ -289,7 +289,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
   - 埋点：`crate_open` / `round_settle` 增加 `loot_ids` / `sold_ids` / `dropped_ids`（`def_id:count` 串；开柜时记下 loot，结算复用同一串）。配套 `docs/埋点*.md` v0.3、`tools/analytics/queries.sql` Q11–Q13。
   - 十字掉落分析文档入仓：`docs/sim/十字掉落概率分析.md`、`docs/sim/cross-drop/`（MC + 解析验证；**未改掉落数值**）。
   - 新增 `tests/g_fixes.test.js`；`npm test` 现含 `f_fixes` + `g_fixes`（共 11 套 + `build-test --check`）。
-  - itch zip：`/workspace/itch-assets/dist/stash-auction-itch-20260926g.zip`（约 157 KB）已备好，**等测试员 g 结论后由少权自行上传 itch.io**。
+  - itch zip：`/workspace/itch-assets/dist/stash-auction-itch-20260926g.zip`（约 157 KB）已备好；**g 已真机放行（⑫ line10-g · 17:41），等少权自行上传 itch.io**（本 agent 不代传）。
 - **旋转 90° 修复 + 欢迎名 + 厅提示 + aria-label（`?v=20260926f`，`b3680fa`）**：**数值未动。** 旋转按钮 `pointerdown`+`click` 双触发导致一次点 180°——改为每次恰好 90°；欢迎弹窗公开名 **STASH AUCTION**；拍卖厅提示随状态重算（修过期「距青铜还差…」）；顶栏图标按钮补齐 `aria-label`（图鉴等）；公开文案去掉 Delta 测试字样。新增 `tests/f_fixes.test.js`。
 - **公开版零 eval 痕迹（`?v=20260926e`，`2b2d43c`）**：**数值 / 广告 / 内购未动。** 在 d 的正式版/测试版拆分之上，把评测面板标记、⋯ 菜单评测项、mono 调试条、以及 `EVAL_STR` 文案全部移出公开源码；只在 `tools/build-test.js` 生成 `/test/` 时从 `tools/test-only/eval-markup.html` + `eval-strings.json` 注入。`npm test` 含 `build-test --check` + `launch_j`：正式版源码与线上根目录无「评测」字样，`/test/?eval=1` 才有评测控件。
 - **首局引导 + 点击解密揭示（`d726780` / `b9a9d7f`，随 20260926c+ 已在线上）**：新档 onboarding 弹层；开箱后逐件点按揭晓（解密前不露名称/稀有度/价值）。
@@ -313,22 +313,23 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 - **数值核对（以 `game.js` 为准）**：启动 ¥15,000；柜租 4500 / **13800** / 30000 / 60000；蜜月 ROUNDS=5 · CASH_END=35000 · FEE_MULT 0.70/0.80；厅峰 4万/8万/**18万/28万/40万**（租金上浮全 0，金红 +3%/+4%/+4%/+4%/+4%）；`BUILD_VERSION=20260926g`；物品表 **129**；`JACKPOT_CHANCE=0.12`；重整 ¥5,850；`ORGANIZE_DAILY_FREE_QUOTA=1`；`FEATURES.ADS_ENABLED` 随 `platform.supportsRewarded()`（Pages 免广告）。
 ### 进行中
 - 游戏侧：线上停在 **20260926g**；专属厅柜批次 1 在分支 `origin/hall-crates-b1`（`9f0db02`：杂货柜 / 夜班柜 / 双联柜 + 每日次数 + 「更多柜子」+ 评测重置今日次数），**未合 main、未上线**——等模拟表进群 + 游戏商业化放行（见 ⑪）。
-- itch.io：g 包已打好，**等测试员对 g 的结论**后由少权上传（本 agent 不代传）。
+- itch.io：g 包已打好且**测试员已对 g 真机放行**（⑫ line10-g · 17:41；自动化 `/workspace/g-verify/live2.txt` 106 passed / 0 failed），**等少权自行上传 itch.io**（本 agent 不代传）。
 - 上架截图：须用**正式版**公开页（无测试黄标 / 无评测字样），新档或约 ¥8 万存档。
 - 阻塞：本机 Windows / Mac 副本若 offline，不影响本仓 GitHub 文档推送。
 
 ### 下一里程碑（商业化已立项）
 - 专属厅柜批次 1（青铜杂货 / 翡翠夜班 / 白银双联）模拟放行 → 合 main → 实测闭环 → 批次 2（铂金古董 / 赤金命运）
-- itch.io 免费评测包上传（测试员 g 通过后；百万以后不加爆率，路线图见 ⑪）
+- itch.io 免费评测包上传（**g 已真机放行，等少权上传**；百万以后不加爆率，路线图见 ⑪）
 - 顶栏 `aria-label` **已在 f 落地**（不再单独立项）
 
 ### 测试请验
-1. **g 点选锚点 / 旋转存档（`?v=20260926g`）**：点选放置异形（尤其 J/S/plus/cross）时图标格对准点击格；旋转后强刷，朝向应保留。正式版 https://gosuquan.github.io/delta-stash-game/ 与测试版 `/test/` 均为 `20260926g`。
-2. **f 旋转按钮 / 厅提示 / aria（`?v=20260926f` 起）**：旋转按钮每次点击恰好 90°（非 180°）；厅提示随解锁状态更新；顶栏图标按钮有 `aria-label`。
-3. **正式版 / 测试版隔离**：正式版强刷后页面与源码均无「评测」；`?eval=1` 无评测控件。测试版 `/test/?eval=1` 有评测面板 / 数据；存档与正式版互不串。
-4. **异形拖拽（d 起）**：J / S / plus / cross 及旋转后的 L/T/Z 等放入仓库后图标可见、可再拖出；结算货值按 `placed` 不错账。
-5. **限时空柜 / 退租**：在测试版强刷后用里程碑 20/35 × 有无折扣复测（正式版无评测重置次数时可跨日）；0 件须全额退实付租金。
-6. （可选）本地 `npm install && npm test` 应全绿（11 套：`crate_milestones` / `version_check` / `ads_off` / `iap_off` / `expand_cost` / `analytics` / `ui_shapes` / `launch_j` / `header_menu` / `f_fixes` / `g_fixes` + `build-test --check`）。
+1. **g 点选锚点 / 旋转存档 / favicon / 埋点（`?v=20260926g`）**：✅ **已放行**（⑫ line10-g · **17:41 真机复核放行**；自动化正式+测试 × 桌面+390 **106 passed / 0 failed**，见 `/workspace/g-verify/live2.txt`）。
+2. **f 旋转按钮 / 厅提示 / aria（`?v=20260926f` 起）**：✅ 测试员已验（见 ⑫ line9-f）；旋转按钮每次恰好 90°；厅提示随解锁状态更新；顶栏图标按钮有 `aria-label`。
+3. **正式版 / 测试版隔离**：正式版强刷后页面与源码均无「评测」；`?eval=1` 无评测控件。测试版 `/test/?eval=1` 有评测面板 / 数据；存档与正式版互不串。（e/f 起已验，持续守住即可。）
+4. **异形拖拽（d 起）**：J / S / plus / cross 及旋转后的 L/T/Z 等放入仓库后图标可见、可再拖出；结算货值按 `placed` 不错账。（d/e/f/g 链路已多次验，持续守住即可。）
+5. **限时空柜 / 退租（仍待真机复测）**：在 `?v=20260926g` 强刷后用里程碑 20/35 × 有无折扣复测（正式版无评测重置次数时可跨日或测试版评测重置）；0 件须全额退实付租金。**本轮焦点项。**
+6. （可选长线）稳健冲 ~8 万 / 自然冲 ~30 万体感；专属厅柜批次 1 合 main 后再开踩。
+7. （可选）本地 `npm install && npm test` 应全绿（11 套：`crate_milestones` / `version_check` / `ads_off` / `iap_off` / `expand_cost` / `analytics` / `ui_shapes` / `launch_j` / `header_menu` / `f_fixes` / `g_fixes` + `build-test --check`）。
 
 
 ## ⑪ 商业化验收日志（每 2 小时迭代）
