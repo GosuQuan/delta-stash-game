@@ -33,7 +33,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260926f";
+  const BUILD_VERSION = "20260926g";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -4565,6 +4565,25 @@
     return null;
   }
 
+  /**
+   * Compact "def_id:count,def_id:count" (sorted by id) of a rolled crate's loot, for analytics `loot_ids`.
+   * Capped at LOOT_IDS_MAX chars: when over, the lowest-value ids are dropped first (so rare items such as the
+   * cross shapes always survive), the remaining pairs stay sorted by id.
+   */
+  const LOOT_IDS_MAX = 200;
+  function lootIdsString(loot) {
+    const cnt = new Map();
+    for (const e of Array.isArray(loot) ? loot : []) if (e && e.defId) cnt.set(e.defId, (cnt.get(e.defId) || 0) + 1);
+    let ids = [...cnt.keys()].sort();
+    const str = (a) => a.map((id) => id + ":" + cnt.get(id)).join(",");
+    if (str(ids).length > LOOT_IDS_MAX) {
+      const val = (id) => { const d = getDef(id); return d ? d.value : 0; };
+      const byValue = [...ids].sort((a, b) => val(a) - val(b) || (a < b ? -1 : 1));
+      while (ids.length > 1 && str(ids).length > LOOT_IDS_MAX) { const drop = byValue.shift(); ids = ids.filter((x) => x !== drop); }
+    }
+    return str(ids).slice(0, LOOT_IDS_MAX);
+  }
+
   function track(ev, fields) {
     try {
       if (!analyticsOn()) return;
@@ -5681,11 +5700,12 @@
         tier: tierId, tier_group: tierGroup(tierId), rent_base: rentBase, rent_paid: rentPaid,
         discount, honeymoon_open: honeymoonActive() ? 1 : 0, rent_cash_pct: rentCashPct,
         t0: Date.now(), challenges: 0, challenge_ok: 0, lastNet: null,
+        loot_ids: lootIdsString(loot), // recorded once at open; round_settle reports this same string (not recomputed from the grid)
       };
       track("crate_open", {
         tier: tierId, tier_group: roundCtx.tier_group, rent_base: rentBase, rent_paid: rentPaid,
         discount, rent_cash_pct: rentCashPct, items: loot.length, rarity: rarityCount,
-        daily_left: dailyLeftFor(tierId),
+        daily_left: dailyLeftFor(tierId), loot_ids: roundCtx.loot_ids,
       });
     }
     pendingRevealLoot = loot;
@@ -6364,9 +6384,13 @@
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    // g: a staging item is selected for tap-to-place → remember it; a TAP (no drag) on this placed item first tries
+    // to place that item (see onPointerUp) instead of just switching the selection to the occupied cell's item.
+    const tapPlaceUid = selectedUid && findStaging(selectedUid) ? selectedUid : null;
     armPendingDrag(e.currentTarget.dataset.uid, "grid", e);
     const cellEl = e.currentTarget.closest && e.currentTarget.closest(".cell");
     if (drag.pending && cellEl) drag.pending.grabCell = { r: +cellEl.dataset.r, c: +cellEl.dataset.c };
+    if (drag.pending && tapPlaceUid) drag.pending.tapPlaceUid = tapPlaceUid;
   }
 
   function onGridDblClick(e) {
@@ -6521,16 +6545,36 @@
     scheduleSave();
   }
 
-  function tryTapPlace(r, c) {
+  /**
+   * Tap-to-place origin candidates for a tap on cell (r,c) (release g). The tapped cell is where the item's
+   * ICON cell (footprint anchor = occupied cell nearest the bounding-box centre) lands — the same alignment
+   * mouse drag uses — NOT the bounding-box top-left, which is an empty corner for J / S / plus / cross / rotated L…
+   * If the tapped cell is already occupied by another item the anchor alignment can never fit, so a second
+   * candidate (tapped cell = bounding-box top-left, the pre-g behaviour) is tried: it only succeeds when the
+   * item really fits around the occupied cell.
+   */
+  function tapOriginCandidates(s, r, c) {
+    const a = defFootprint(s.defId, s.rot).anchor;
+    const list = [{ r: r - a[0], c: c - a[1] }];
+    if (grid[r] && grid[r][c] && (a[0] !== 0 || a[1] !== 0)) list.push({ r, c });
+    return list;
+  }
+
+  /** Try to place staging item `uid` for a tap on (r,c). `quiet` = no "放不下" feedback (a placed item may be selected instead). */
+  function tryTapPlace(r, c, uid, quiet) {
     if (drag.active) return false;
     // Pending select is fine — clear it and place (mobile tap-select → tap-cell)
     if (drag.pending) drag.pending = null;
-    if (!selectedUid) return false;
-    const s = findStaging(selectedUid);
+    const useUid = uid || selectedUid;
+    if (!useUid) return false;
+    const s = findStaging(useUid);
     if (!s) return false;
-    if (!canPlace(s.defId, s.rot, r, c, null)) {
+    const cands = tapOriginCandidates(s, r, c);
+    const origin = cands.find((o) => canPlace(s.defId, s.rot, o.r, o.c, null));
+    if (!origin) {
+      if (quiet) return false;
       clearHighlights();
-      const cells = cellsFor(s.defId, s.rot, r, c);
+      const cells = cellsFor(s.defId, s.rot, cands[0].r, cands[0].c);
       for (const cell of cells) {
         if (cell.r < 0 || cell.c < 0 || cell.r >= gridSize || cell.c >= gridSize) continue;
         const cellEl = el.warehouseGrid.querySelector(`[data-r="${cell.r}"][data-c="${cell.c}"]`);
@@ -6542,14 +6586,15 @@
     }
     const ok = placeItem(
       { uid: s.uid, defId: s.defId, rot: s.rot, valueOverride: s.valueOverride },
-      r,
-      c
+      origin.r,
+      origin.c
     );
     if (!ok) return false;
     staging = staging.filter((x) => x.uid !== s.uid);
     // Advance selection to next staging item for fast mobile packing
     selectedUid = staging[0] ? staging[0].uid : null;
     fx("placeSnap");
+    clearHighlights();
     renderStaging();
     renderGrid();
     updateStats();
@@ -6572,8 +6617,9 @@
       clearHighlights();
       const s = findStaging(selectedUid);
       if (s) {
-        const cells = cellsFor(s.defId, s.rot, r, c);
-        const ok = canPlace(s.defId, s.rot, r, c, null);
+        const o = tapOriginCandidates(s, r, c).find((q) => canPlace(s.defId, s.rot, q.r, q.c, null));
+        const ok = !!o;
+        const cells = o ? cellsFor(s.defId, s.rot, o.r, o.c) : cellsFor(s.defId, s.rot, r - defFootprint(s.defId, s.rot).anchor[0], c - defFootprint(s.defId, s.rot).anchor[1]);
         for (const cell of cells) {
           if (cell.r < 0 || cell.c < 0 || cell.r >= gridSize || cell.c >= gridSize) continue;
           const cellEl = el.warehouseGrid.querySelector(`[data-r="${cell.r}"][data-c="${cell.c}"]`);
@@ -6608,7 +6654,13 @@
   function onPointerUp(e) {
     if (drag.pending && !drag.active) {
       // Tap without drag: keep selection for tap-to-place / rotate
+      const pend = drag.pending;
       drag.pending = null;
+      if (pend.tapPlaceUid && pend.grabCell && (pend.pointerId == null || e.pointerId == null || pend.pointerId === e.pointerId)) {
+        // g: tap on an already-placed item while a staging item was selected → try placing the staged item first;
+        // on conflict only the staged item is rejected and the tapped placed item stays selected (old behaviour).
+        if (tryTapPlace(pend.grabCell.r, pend.grabCell.c, pend.tapPlaceUid, true)) return;
+      }
       updatePlaceTargetClass();
       return;
     }
@@ -6663,6 +6715,7 @@
           renderStaging();
           showDetail(s);
           updatePlaceTargetClass();
+          scheduleSave();
           return;
         }
       }
@@ -6675,6 +6728,7 @@
       renderStaging();
       showDetail(s);
       updatePlaceTargetClass();
+      scheduleSave();
       return;
     }
     const p = placed.get(selectedUid);
@@ -6692,6 +6746,7 @@
     if (canPlace(snapshot.defId, newRot, snapshot.ox, snapshot.oy, snapshot.uid)) {
       placeItem({ ...snapshot, rot: newRot }, snapshot.ox, snapshot.oy);
       fx("rotate");
+      scheduleSave(); // g: persist the new rotation right away (was only saved on the next unrelated save event)
     } else {
       placeItem(snapshot, snapshot.ox, snapshot.oy);
       fx("rotate");
@@ -6868,6 +6923,8 @@
         empty_refund: emptyCrateRefund, net,
         challenges: c.challenges || 0, challenge_ok: c.challenge_ok || 0,
         dur_s: c.t0 ? Math.round((Date.now() - c.t0) / 1000) : null,
+        loot_ids: c.loot_ids != null ? c.loot_ids : null, // same string as crate_open (recorded at open, not recomputed)
+        sold_ids: lootIdsString(soldEntries), dropped_ids: lootIdsString(remainingStaging), // packed+bonus items sold / staging items discarded
       });
       if (roundCtx) roundCtx.lastNet = net;
     }

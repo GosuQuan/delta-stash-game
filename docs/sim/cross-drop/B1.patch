@@ -1,0 +1,20 @@
+--- game.js
++++ game.js
+@@ -669,7 +669,7 @@
+     { id: "safe_dial", name: "金库转盘", icon: "🔐", shape: "T", rarity: "xiaojin", value: 10500 },
+     { id: "gilt_chain", name: "鎏金链匣", icon: "📿", shape: "hook", rarity: "xiaojin", value: 11200, tiers: ["rare", "sealed"] },
+     { id: "auction_paddle", name: "鎏金竞拍牌", icon: "🏓", shape: "skew", rarity: "xiaojin", value: 10800, tiers: ["sealed", "limited"] },
+-    { id: "gold_flute", name: "金管短笛", icon: "🎶", shape: "4x1", rarity: "xiaojin", value: 11500, tiers: ["sealed"] },
++    { id: "gold_flute", name: "金管短笛", icon: "🎶", shape: "cross", rarity: "xiaojin", value: 11500, tiers: ["sealed"] },
+     // dajin
+     { id: "bullion_slice", name: "金条切片", icon: "🟨", shape: "1x3", rarity: "dajin", value: 21000 },
+     { id: "chrono_core", name: "金耀机芯", icon: "⏱️", shape: "plus", rarity: "dajin", value: 26000 },
+@@ -690,7 +690,7 @@
+     { id: "ruby_matrix", name: "红宝石阵列", icon: "♦️", shape: "plus", rarity: "xiaohong", value: 52000 },
+     { id: "scar_contract", name: "疤面仓单", icon: "📝", shape: "Z", rarity: "xiaohong", value: 50000, tiers: ["sealed", "limited"] },
+     { id: "red_hook_crate", name: "赤钩货匣", icon: "🪝", shape: "hook", rarity: "xiaohong", value: 56000, tiers: ["limited"] },
+-    { id: "vein_core", name: "血脉能源芯", icon: "💉", shape: "cross", rarity: "xiaohong", value: 58000, tiers: ["sealed", "limited"] },
++    { id: "vein_core", name: "血脉能源芯", icon: "💉", shape: "4x1", rarity: "xiaohong", value: 58000, tiers: ["sealed", "limited"] },
+     // dahong · awkward premium
+     { id: "myth_gavel", name: "神话拍卖槌", icon: "⚖️", shape: "bigL", rarity: "dahong", value: 160000, tiers: ["sealed", "limited"] },
+     { id: "void_ingot", name: "虚空赤锭", icon: "🌑", shape: "cross", rarity: "dahong", value: 175000, tiers: ["limited"] },

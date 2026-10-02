@@ -20,6 +20,8 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "test");
 const FILES = ["index.html", "game.js", "style.css", "audio.js", "platform.js", "version.json"];
+/** binary files copied byte-for-byte into test/ (favicon set referenced by index.html with relative hrefs) */
+const ASSET_FILES = ["favicon.svg", "favicon.ico", "favicon-32.png", "apple-touch-icon.png"];
 const KEY_PREFIX = "test_";
 const TEST_ONLY = path.join(__dirname, "test-only");
 const BANNER_CSS = `
@@ -108,8 +110,14 @@ function check() {
     if (have === null) problems.push(`test/${f} missing`);
     else if (have !== s) problems.push(`test/${f} is out of date`);
   }
+  for (const f of ASSET_FILES) {
+    let have = null;
+    try { have = fs.readFileSync(path.join(OUT, f)); } catch (_) { /* missing */ }
+    if (have === null) problems.push(`test/${f} missing`);
+    else if (!have.equals(fs.readFileSync(path.join(ROOT, f)))) problems.push(`test/${f} is out of date`);
+  }
   let extra = [];
-  try { extra = fs.readdirSync(OUT).filter((f) => !(f in want)); } catch (_) { /* no dir */ }
+  try { extra = fs.readdirSync(OUT).filter((f) => !(f in want) && !ASSET_FILES.includes(f)); } catch (_) { /* no dir */ }
   for (const f of extra) problems.push(`test/${f} is not generated (stray file)`);
   return problems;
 }
@@ -117,12 +125,13 @@ function check() {
 function write() {
   const files = build();
   fs.mkdirSync(OUT, { recursive: true });
-  for (const f of fs.readdirSync(OUT)) if (!(f in files)) fs.rmSync(path.join(OUT, f), { recursive: true, force: true });
+  for (const f of fs.readdirSync(OUT)) if (!(f in files) && !ASSET_FILES.includes(f)) fs.rmSync(path.join(OUT, f), { recursive: true, force: true });
   for (const [f, s] of Object.entries(files)) fs.writeFileSync(path.join(OUT, f), s);
-  return Object.keys(files);
+  for (const f of ASSET_FILES) fs.copyFileSync(path.join(ROOT, f), path.join(OUT, f));
+  return [...Object.keys(files), ...ASSET_FILES];
 }
 
-module.exports = { injectEvalMarkup, injectEvalStrings, build, check, write, FILES, KEY_PREFIX };
+module.exports = { injectEvalMarkup, injectEvalStrings, build, check, write, FILES, ASSET_FILES, KEY_PREFIX };
 
 if (require.main === module) {
   if (process.argv.includes("--check")) {

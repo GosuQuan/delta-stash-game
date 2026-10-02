@@ -29,11 +29,22 @@ const HOOK = `
     get revealing() { return revealing; }, get crateOpenedThisRound() { return crateOpenedThisRound; },
     get settleReplayActive() { return settleReplayActive; }, get evalMode() { return evalMode; },
     get analyticsSave() { return analyticsSave; }, get ownedGridMax() { return ownedGridMax; },
-    FEATURES, ANALYTICS, BUILD_VERSION, SAVE_KEY, openCrate, extract, nextRound, track, saveGame, newSaveConfirm,
+    FEATURES, ANALYTICS, BUILD_VERSION, SAVE_KEY, ITEM_DEFS, lootIdsString, openCrate, extract, nextRound, track, saveGame, newSaveConfirm,
     tryExpandWarehouse, tryExpandWithCash, setEvalMode, gridSize: () => gridSize,
     selectTier(t) { selectedTier = t; },
     giveFreeCommon(n) { freeCommonCharges = n; },
+    get staging() { return staging; }, placeItem,
+    forceLoot(ids) { window.__forceLoot = ids; },
   };
+  // g: record every generated loot array (by reference, so a fallback push is seen too); __forceLoot = seeded loot
+  window.__loots = [];
+  { const _roll = rollLoot;
+    rollLoot = function (t) {
+      let l;
+      if (window.__forceLoot) { l = window.__forceLoot.map((id) => ({ uid: nextUid(), defId: id, rot: 0, valueOverride: getDef(id).value })); window.__forceLoot = null; }
+      else l = _roll(t);
+      window.__loots.push(l); return l;
+    }; }
 `;
 
 function mulberry32(a) {
@@ -150,6 +161,74 @@ async function main() {
   const bad = all.flatMap((e) => Object.keys(e).filter((k) => PII.includes(k)));
   check(bad.length === 0, `no personal fields in events (${bad.join(",")})`);
 
+  // ---------- g: loot_ids on crate_open / round_settle (item ids dropped in the crate) ----------
+  const LOOT_RE = /^[a-z0-9_]+:[1-9][0-9]*(,[a-z0-9_]+:[1-9][0-9]*)*$/;
+  const idsOf = (loot) => { const m = {}; for (const e of loot) m[e.defId] = (m[e.defId] || 0) + 1; return Object.keys(m).sort().map((k) => k + ":" + m[k]).join(","); };
+  const parse = (str) => (str ? str.split(",").map((x) => x.split(":")) : []);
+  const sum = (str) => parse(str).reduce((n, [, c]) => n + Number(c), 0);
+  if (co[0]) {
+    check(typeof co[0].loot_ids === "string" && LOOT_RE.test(co[0].loot_ids), `crate_open.loot_ids well formed (${co[0].loot_ids})`);
+    check(co[0].loot_ids === idsOf(w.__loots[0]), `crate_open.loot_ids matches the generated loot (${co[0].loot_ids} vs ${idsOf(w.__loots[0])})`);
+    check(sum(co[0].loot_ids) === co[0].items, `crate_open.loot_ids counts sum to items (${sum(co[0].loot_ids)} vs ${co[0].items})`);
+    check(co[0].loot_ids === parse(co[0].loot_ids).map(([k]) => k).sort().map((k) => k + ":" + parse(co[0].loot_ids).find(([x]) => x === k)[1]).join(","), "loot_ids sorted by id");
+    check(co[0].loot_ids.length <= 200, `loot_ids ≤ 200 chars (${co[0].loot_ids.length})`);
+  }
+  if (rsE[0] && co[0]) {
+    check(rsE[0].loot_ids === co[0].loot_ids, "round_settle.loot_ids == crate_open.loot_ids (recorded at open)");
+    check(rsE[0].sold_ids === "" && rsE[0].dropped_ids === co[0].loot_ids, `nothing packed → sold_ids "" and dropped_ids == loot_ids (${rsE[0].sold_ids}|${rsE[0].dropped_ids})`);
+  }
+  if (co[0] && rsE[0]) console.log("SAMPLE (random common roll) crate_open:", JSON.stringify({ loot_ids: co[0].loot_ids, items: co[0].items }), " round_settle:", JSON.stringify({ loot_ids: rsE[0].loot_ids, sold_ids: rsE[0].sold_ids, dropped_ids: rsE[0].dropped_ids, discard_n: rsE[0].discard_n }));
+  // seeded loot with a cross item + duplicates; pack one tape before settling → sold_ids / dropped_ids split
+  {
+    const nOpen = w.__loots.length;
+    T.forceLoot(["vein_core", "tape", "tape"]);
+    T.selectTier("common"); T.openCrate();
+    await finishReveal(w, () => T.crateOpenedThisRound && !T.revealing);
+    const coS = evs(w, "crate_open").slice(-1)[0];
+    check(w.__loots.length === nOpen + 1 && coS && coS.loot_ids === "tape:2,vein_core:1", `seeded cross loot → loot_ids "tape:2,vein_core:1" (${coS && coS.loot_ids})`);
+    check(coS && coS.items === 3 && sum(coS.loot_ids) === 3, "seeded loot: items 3 == sum of loot_ids");
+    const tape = T.staging.find((e) => e.defId === "tape");
+    check(!!tape && T.placeItem(tape, 0, 0), "seeded loot: packed one tape");
+    if (tape) T.staging.splice(T.staging.indexOf(tape), 1);
+    T.extract();
+    await waitFor(() => !T.settleReplayActive, 2000);
+    const rsS = evs(w, "round_settle").slice(-1)[0];
+    check(rsS && rsS.loot_ids === "tape:2,vein_core:1", `seeded round_settle.loot_ids same string (${rsS && rsS.loot_ids})`);
+    check(rsS && rsS.sold_ids === "tape:1" && rsS.dropped_ids === "tape:1,vein_core:1", `seeded sold_ids "tape:1" / dropped_ids "tape:1,vein_core:1" (${rsS && rsS.sold_ids}|${rsS && rsS.dropped_ids})`);
+    check(rsS && coS && rsS.eval === 0 && coS.eval === 0, "seeded events still eval = 0 in normal play");
+    T.nextRound(); await waitFor(() => false, 3);
+  }
+  // seeded cross loot, pack the two tapes and discard ONLY the cross → dropped_ids "vein_core:1", sold_ids "tape:2"
+  {
+    T.forceLoot(["vein_core", "tape", "tape"]);
+    T.selectTier("common"); T.openCrate();
+    await finishReveal(w, () => T.crateOpenedThisRound && !T.revealing);
+    const coD = evs(w, "crate_open").slice(-1)[0];
+    const tapes = T.staging.filter((e) => e.defId === "tape");
+    let packed = 0;
+    tapes.forEach((t, i) => { if (T.placeItem(t, i, 0)) { packed++; T.staging.splice(T.staging.indexOf(t), 1); } });
+    check(packed === 2, "second seeded case: both tapes packed");
+    T.extract();
+    await waitFor(() => !T.settleReplayActive, 2000);
+    const rsD = evs(w, "round_settle").slice(-1)[0];
+    check(rsD && rsD.loot_ids === coD.loot_ids && rsD.loot_ids === "tape:2,vein_core:1", `round_settle.loot_ids === crate_open.loot_ids for the same round (${rsD && rsD.loot_ids} / ${coD && coD.loot_ids})`);
+    check(rsD && rsD.sold_ids === "tape:2" && rsD.dropped_ids === "vein_core:1", `dropped_ids appears after discarding one item: sold "tape:2", dropped "vein_core:1" (${rsD && rsD.sold_ids}|${rsD && rsD.dropped_ids})`);
+    check(rsD && sum(rsD.sold_ids) + sum(rsD.dropped_ids) === sum(rsD.loot_ids), "sold + dropped accounts for every item of the crate");
+    check(rsD && rsD.discard_n === 1 && rsD.dropped_ids.length <= 200 && rsD.sold_ids.length <= 200, "discard_n matches dropped_ids count; both ≤ 200 chars");
+    console.log("SAMPLE crate_open :", JSON.stringify({ loot_ids: coD.loot_ids, items: coD.items }));
+    console.log("SAMPLE round_settle:", JSON.stringify({ loot_ids: rsD.loot_ids, sold_ids: rsD.sold_ids, dropped_ids: rsD.dropped_ids, discard_n: rsD.discard_n }));
+    T.nextRound(); await waitFor(() => false, 3);
+  }
+  { // truncation: over-long list capped at 200 chars, keeps the most valuable ids, still well formed
+    const defs = T.ITEM_DEFS.slice(0, 40).map((x) => ({ defId: x.id }));
+    const t = T.lootIdsString(defs);
+    check(t.length <= 200 && LOOT_RE.test(t), `lootIdsString caps long lists (len ${t.length})`);
+    const rare = T.ITEM_DEFS.find((x) => x.id === "vein_core");
+    const t2 = T.lootIdsString([...defs, { defId: rare.id }]);
+    check(t2.includes("vein_core:1") || T.ITEM_DEFS.slice(0, 40).some((x) => x.value > rare.value), "truncation drops lowest-value ids first (high-value cross id survives)");
+    check(T.lootIdsString([]) === "" && T.lootIdsString(null) === "", "lootIdsString of nothing = empty string");
+  }
+
   // rent-0 (free token) open: distinguishable
   T.giveFreeCommon(1);
   await playRound(w, "common");
@@ -192,6 +271,9 @@ async function main() {
   const qe = queue(we);
   check(qe.some((e) => e.ev === "crate_open") && qe.some((e) => e.ev === "round_settle"), `eval: crate_open + round_settle queued (${qe.map((e) => e.ev).join(",")})`);
   check(qe.length > 0 && qe.every((e) => e.eval === 1 && e.econ === "econ-0925h"), "eval: every event has eval = 1 + econ");
+  { const ceE = qe.find((e) => e.ev === "crate_open"), rsEv = qe.find((e) => e.ev === "round_settle");
+    check(ceE && LOOT_RE.test(ceE.loot_ids) && ceE.loot_ids === idsOf(we.__loots[0]) && ceE.eval === 1, `eval: crate_open.loot_ids present + matches loot, still eval = 1 (${ceE && ceE.loot_ids})`);
+    check(rsEv && rsEv.loot_ids === ceE.loot_ids && typeof rsEv.sold_ids === "string" && rsEv.eval === 1, "eval: round_settle carries the same loot_ids, still eval = 1"); }
   check(we.__net.length === 0, "eval: no network");
 
   // ---------- toggle off: nothing queued ----------

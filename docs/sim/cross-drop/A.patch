@@ -1,0 +1,33 @@
+--- game.js
++++ game.js
+@@ -65,7 +65,7 @@
+       allowed: ["green", "blue", "purple", "pink", "xiaojin", "dajin", "yanjin", "xiaohong", "dahong"],
+       // gold/red ≈11% of rolls (was ≈26%); green/blue backfill → usually a loss, big hits recoup
+       mult: {
+-        dahong: 0.55, xiaohong: 0.6, yanjin: 0.7, dajin: 0.8, xiaojin: 0.8,
++        dahong: 0.55, xiaohong: 0.9624, yanjin: 0.55, dajin: 0.6286, xiaojin: 0.6286,
+         pink: 1.0, purple: 1.3, blue: 1.2, green: 0.6, white: 0,
+       },
+     },
+@@ -690,7 +690,7 @@
+     { id: "ruby_matrix", name: "红宝石阵列", icon: "♦️", shape: "plus", rarity: "xiaohong", value: 52000 },
+     { id: "scar_contract", name: "疤面仓单", icon: "📝", shape: "Z", rarity: "xiaohong", value: 50000, tiers: ["sealed", "limited"] },
+     { id: "red_hook_crate", name: "赤钩货匣", icon: "🪝", shape: "hook", rarity: "xiaohong", value: 56000, tiers: ["limited"] },
+-    { id: "vein_core", name: "血脉能源芯", icon: "💉", shape: "cross", rarity: "xiaohong", value: 58000, tiers: ["sealed", "limited"] },
++    { id: "vein_core", name: "血脉能源芯", icon: "💉", shape: "cross", rarity: "xiaohong", value: 58000, w: { sealed: 16 }, tiers: ["sealed", "limited"] },
+     // dahong · awkward premium
+     { id: "myth_gavel", name: "神话拍卖槌", icon: "⚖️", shape: "bigL", rarity: "dahong", value: 160000, tiers: ["sealed", "limited"] },
+     { id: "void_ingot", name: "虚空赤锭", icon: "🌑", shape: "cross", rarity: "dahong", value: 175000, tiers: ["limited"] },
+@@ -1278,7 +1278,11 @@
+         const a = pool.filter((d) => AWKWARD_SHAPES.has(d.shape));
+         if (a.length) filtered = a;
+       }
+-      return filtered[Math.floor(Math.random() * filtered.length)];
++      const wOf = (d) => (d.w && typeof d.w === "object" ? (d.w[tid] != null ? d.w[tid] : 1) : 1);
++      const tw = filtered.reduce((a, d) => a + wOf(d), 0);
++      let rr = Math.random() * tw;
++      for (const d of filtered) { rr -= wOf(d); if (rr < 0) return d; }
++      return filtered[filtered.length - 1];
+     }
+ 
+     const items = [];

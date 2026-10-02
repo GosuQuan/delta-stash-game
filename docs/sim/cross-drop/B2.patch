@@ -1,0 +1,20 @@
+--- game.js
++++ game.js
+@@ -659,7 +659,7 @@
+     { id: "rose_clock", name: "玫金座钟", icon: "🕰️", shape: "T", rarity: "pink", value: 7100 },
+     { id: "crystal_vial", name: "粉晶药瓶匣", icon: "🧴", shape: "J", rarity: "pink", value: 6900 },
+     { id: "lace_frame", name: "蕾丝装裱框", icon: "🪟", shape: "U", rarity: "pink", value: 7600 },
+-    { id: "perfume_chest", name: "香水收藏匣", icon: "🌺", shape: "skew", rarity: "pink", value: 8000, tiers: ["rare", "sealed"] },
++    { id: "perfume_chest", name: "香水收藏匣", icon: "🌺", shape: "cross", rarity: "pink", value: 8000, tiers: ["rare", "sealed"] },
+     { id: "ballet_box", name: "芭蕾首饰盒", icon: "🩰", shape: "stair", rarity: "pink", value: 8200, tiers: ["sealed", "limited"] },
+     { id: "opal_tray", name: "蛋白石托盘", icon: "✨", shape: "Z", rarity: "pink", value: 7700 },
+     // xiaojin
+@@ -690,7 +690,7 @@
+     { id: "ruby_matrix", name: "红宝石阵列", icon: "♦️", shape: "plus", rarity: "xiaohong", value: 52000 },
+     { id: "scar_contract", name: "疤面仓单", icon: "📝", shape: "Z", rarity: "xiaohong", value: 50000, tiers: ["sealed", "limited"] },
+     { id: "red_hook_crate", name: "赤钩货匣", icon: "🪝", shape: "hook", rarity: "xiaohong", value: 56000, tiers: ["limited"] },
+-    { id: "vein_core", name: "血脉能源芯", icon: "💉", shape: "cross", rarity: "xiaohong", value: 58000, tiers: ["sealed", "limited"] },
++    { id: "vein_core", name: "血脉能源芯", icon: "💉", shape: "skew", rarity: "xiaohong", value: 58000, tiers: ["sealed", "limited"] },
+     // dahong · awkward premium
+     { id: "myth_gavel", name: "神话拍卖槌", icon: "⚖️", shape: "bigL", rarity: "dahong", value: 160000, tiers: ["sealed", "limited"] },
+     { id: "void_ingot", name: "虚空赤锭", icon: "🌑", shape: "cross", rarity: "dahong", value: 175000, tiers: ["limited"] },

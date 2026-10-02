@@ -1,0 +1,1172 @@
+[
+ {
+  "tid": "common",
+  "hall": "none",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 4605.549428,
+  "anEV": 4609.021994717106,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 4500
+ },
+ {
+  "tid": "common",
+  "hall": "none",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 4001.674316,
+  "anEV": 3999.2791949808084,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 4500
+ },
+ {
+  "tid": "common",
+  "hall": "none",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 7284.291024,
+  "anEV": 3999.2791949808084,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 4500
+ },
+ {
+  "tid": "common",
+  "hall": "crimson_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 4610.847016,
+  "anEV": 4609.021994717106,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 4500
+ },
+ {
+  "tid": "common",
+  "hall": "crimson_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 4000.986004,
+  "anEV": 3999.2791949808084,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 4500
+ },
+ {
+  "tid": "common",
+  "hall": "crimson_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 7288.379744,
+  "anEV": 3999.2791949808084,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 4500
+ },
+ {
+  "tid": "rare",
+  "hall": "none",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 13937.4922,
+  "anEV": 13917.50843816272,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 13800
+ },
+ {
+  "tid": "rare",
+  "hall": "none",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 13749.608448,
+  "anEV": 13748.623661898819,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 13800
+ },
+ {
+  "tid": "rare",
+  "hall": "none",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 19685.84728,
+  "anEV": 13748.623661898819,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 13800
+ },
+ {
+  "tid": "rare",
+  "hall": "crimson_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 14041.231916,
+  "anEV": 14046.687762683367,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 13800
+ },
+ {
+  "tid": "rare",
+  "hall": "crimson_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 13844.812508,
+  "anEV": 13876.865607177024,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 13800
+ },
+ {
+  "tid": "rare",
+  "hall": "crimson_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0,
+  "anP": 0,
+  "mcE": 0,
+  "anE": 0,
+  "mcEV": 19741.0857,
+  "anEV": 13876.865607177024,
+  "mcShare": 0,
+  "anShare": 0,
+  "per": {},
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0,
+   "void_ingot": 0
+  },
+  "fee": 13800
+ },
+ {
+  "tid": "sealed",
+  "hall": "none",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.005696,
+  "anP": 0.005568649120453295,
+  "mcE": 0.005704,
+  "anE": 0.005582274784640093,
+  "mcEV": 34683.723092,
+  "anEV": 34685.4636482523,
+  "mcShare": 0.010181542940568925,
+  "anShare": 0.009980462106413266,
+  "per": {
+   "vein_core": 0.005704
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0008588115053292452,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "none",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.009084,
+  "anP": 0.00855833120073432,
+  "mcE": 0.009128,
+  "anE": 0.008590575375091983,
+  "mcEV": 37691.68164,
+  "anEV": 37665.31421464419,
+  "mcShare": 0.015046039744699488,
+  "anShare": 0.014143848689139012,
+  "per": {
+   "vein_core": 0.009128
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.001321626980783382,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "none",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.00756,
+  "anP": 0.007246281100563745,
+  "mcE": 0.007572,
+  "anE": 0.007268948394308601,
+  "mcEV": 40402.616652,
+  "anEV": 37665.31421464419,
+  "mcShare": 0.01162865682801618,
+  "anShare": 0.014143848689139012,
+  "per": {
+   "vein_core": 0.007572
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.001321626980783382,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "bronze_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.005868,
+  "anP": 0.005715734263904343,
+  "mcE": 0.005876,
+  "anE": 0.005730090549422408,
+  "mcEV": 35175.620672,
+  "anEV": 35151.073103429226,
+  "mcShare": 0.010389451586590045,
+  "anShare": 0.01010903827175038,
+  "per": {
+   "vein_core": 0.005876
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0008815523922188319,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "bronze_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.00854,
+  "anP": 0.00877523811273026,
+  "mcE": 0.008592,
+  "anE": 0.00880914204851416,
+  "mcEV": 38103.624124,
+  "anEV": 38188.50668760744,
+  "mcShare": 0.01400305079284904,
+  "anShare": 0.014305000606819048,
+  "per": {
+   "vein_core": 0.008592
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013552526228483323,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "bronze_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.007712,
+  "anP": 0.007430055091532661,
+  "mcE": 0.007744,
+  "anE": 0.007453889425665828,
+  "mcEV": 40732.244124,
+  "anEV": 38188.50668760744,
+  "mcShare": 0.011793819720258142,
+  "anShare": 0.014305000606819048,
+  "per": {
+   "vein_core": 0.007744
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013552526228483323,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "jade_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.005936,
+  "anP": 0.005764535252494568,
+  "mcE": 0.005948,
+  "anE": 0.005779138179619553,
+  "mcEV": 35362.563516,
+  "anEV": 35305.569752737545,
+  "mcShare": 0.010462634017825033,
+  "anShare": 0.010150952552971234,
+  "per": {
+   "vein_core": 0.005948
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0008890981814799312,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "jade_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.009028,
+  "anP": 0.00884710532765634,
+  "mcE": 0.00906,
+  "anE": 0.00888156842563282,
+  "mcEV": 38404.7609,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.014611396682331643,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.00906
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "jade_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.00756,
+  "anP": 0.007490945777173297,
+  "mcE": 0.007596,
+  "anE": 0.007515173283227772,
+  "mcEV": 40963.306088,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.011500917113182204,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.007596
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "silver_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.005776,
+  "anP": 0.005764535252494568,
+  "mcE": 0.005796,
+  "anE": 0.005779138179619553,
+  "mcEV": 35255.18822,
+  "anEV": 35305.569752737545,
+  "mcShare": 0.010208657453595067,
+  "anShare": 0.010150952552971234,
+  "per": {
+   "vein_core": 0.005796
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0008890981814799312,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "silver_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.009016,
+  "anP": 0.00884710532765634,
+  "mcE": 0.009048,
+  "anE": 0.00888156842563282,
+  "mcEV": 38525.60378,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.014514067247150616,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.009048
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "silver_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.007408,
+  "anP": 0.007490945777173297,
+  "mcE": 0.007428,
+  "anE": 0.007515173283227772,
+  "mcEV": 40946.573304,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.011240093293839551,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.007428
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "platinum_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.005776,
+  "anP": 0.005764535252494568,
+  "mcE": 0.005792,
+  "anE": 0.005779138179619553,
+  "mcEV": 35324.527696,
+  "anEV": 35305.569752737545,
+  "mcShare": 0.010151869972223506,
+  "anShare": 0.010150952552971234,
+  "per": {
+   "vein_core": 0.005792
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0008890981814799312,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "platinum_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.008784,
+  "anP": 0.00884710532765634,
+  "mcE": 0.008824,
+  "anE": 0.00888156842563282,
+  "mcEV": 38358.89636,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.014244240889312176,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.008824
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "platinum_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.007464,
+  "anP": 0.007490945777173297,
+  "mcE": 0.007488,
+  "anE": 0.007515173283227772,
+  "mcEV": 40865.383684,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.01133059382435921,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.007488
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "crimson_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.005764,
+  "anP": 0.005764535252494568,
+  "mcE": 0.005776,
+  "anE": 0.005779138179619553,
+  "mcEV": 35311.672188,
+  "anEV": 35305.569752737545,
+  "mcShare": 0.010155551572034207,
+  "anShare": 0.010150952552971234,
+  "per": {
+   "vein_core": 0.005776
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0008890981814799312,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "crimson_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.00888,
+  "anP": 0.00884710532765634,
+  "mcE": 0.008904,
+  "anE": 0.00888156842563282,
+  "mcEV": 38414.824716,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.014388653861793662,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.008904
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "sealed",
+  "hall": "crimson_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.007556,
+  "anP": 0.007490945777173297,
+  "mcE": 0.007576,
+  "anE": 0.007515173283227772,
+  "mcEV": 40913.500696,
+  "anEV": 38361.876830270005,
+  "mcShare": 0.011476094981183177,
+  "anShare": 0.014357431836734956,
+  "per": {
+   "vein_core": 0.007576
+  },
+  "anPer": {
+   "gold_drone": 0,
+   "solar_array": 0,
+   "vein_core": 0.0013663951424050494,
+   "void_ingot": 0
+  },
+  "fee": 30000
+ },
+ {
+  "tid": "limited",
+  "hall": "none",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.065712,
+  "anP": 0.06573290919410887,
+  "mcE": 0.067684,
+  "anE": 0.06773662376138305,
+  "mcEV": 75490.22842,
+  "anEV": 75534.69484618664,
+  "mcShare": 0.07180711015790035,
+  "anShare": 0.07213066910013319,
+  "per": {
+   "gold_drone": 0.018624,
+   "vein_core": 0.014924,
+   "void_ingot": 0.015816,
+   "solar_array": 0.01832
+  },
+  "anPer": {
+   "gold_drone": 0.0024388953549888907,
+   "solar_array": 0.002482478548503308,
+   "vein_core": 0.0019939977491559334,
+   "void_ingot": 0.0021161781822029413
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "none",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.114524,
+  "anP": 0.11450291766910997,
+  "mcE": 0.12106,
+  "anE": 0.12078765314873804,
+  "mcEV": 81105.617004,
+  "anEV": 81227.33898146838,
+  "mcShare": 0.0730552948966257,
+  "anShare": 0.07271942231431061,
+  "per": {
+   "vein_core": 0.047008,
+   "gold_drone": 0.032384,
+   "solar_array": 0.041668
+  },
+  "anPer": {
+   "gold_drone": 0.004349056603773585,
+   "solar_array": 0.005533468104222821,
+   "vein_core": 0.0062224957118353335,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "none",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.099884,
+  "anP": 0.10000853677621668,
+  "mcE": 0.104552,
+  "anE": 0.10468263272890632,
+  "mcEV": 79395.391088,
+  "anEV": 81227.33898146838,
+  "mcShare": 0.06425525202521565,
+  "anShare": 0.07271942231431061,
+  "per": {
+   "solar_array": 0.035968,
+   "gold_drone": 0.028624,
+   "vein_core": 0.03996
+  },
+  "anPer": {
+   "gold_drone": 0.004349056603773585,
+   "solar_array": 0.005533468104222821,
+   "vein_core": 0.0062224957118353335,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "bronze_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.067372,
+  "anP": 0.06738373310569643,
+  "mcE": 0.069472,
+  "anE": 0.06949166755585563,
+  "mcEV": 76685.201648,
+  "anEV": 76837.51298915928,
+  "mcShare": 0.07281086666015987,
+  "anShare": 0.07274486254928389,
+  "per": {
+   "solar_array": 0.019596,
+   "vein_core": 0.015184,
+   "gold_drone": 0.018496,
+   "void_ingot": 0.016196
+  },
+  "anPer": {
+   "gold_drone": 0.0025020866969905197,
+   "solar_array": 0.002546799123246006,
+   "vein_core": 0.0020456618738424006,
+   "void_ingot": 0.0021710079800351576
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "bronze_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.116852,
+  "anP": 0.11699727300079002,
+  "mcE": 0.123404,
+  "anE": 0.12357018942555364,
+  "mcEV": 82486.127424,
+  "anEV": 82516.82245176444,
+  "mcShare": 0.07312859566061909,
+  "anShare": 0.07323207156025115,
+  "per": {
+   "vein_core": 0.047464,
+   "solar_array": 0.042548,
+   "gold_drone": 0.033392
+  },
+  "anPer": {
+   "gold_drone": 0.004449244060475163,
+   "solar_array": 0.0056609403692699945,
+   "vein_core": 0.006365840826995327,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "bronze_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.101676,
+  "anP": 0.10220518291919595,
+  "mcE": 0.106532,
+  "anE": 0.10709416416881315,
+  "mcEV": 80518.762748,
+  "anEV": 82516.82245176444,
+  "mcShare": 0.06477321287614478,
+  "anShare": 0.07323207156025115,
+  "per": {
+   "gold_drone": 0.028872,
+   "vein_core": 0.041368,
+   "solar_array": 0.036292
+  },
+  "anPer": {
+   "gold_drone": 0.004449244060475163,
+   "solar_array": 0.0056609403692699945,
+   "vein_core": 0.006365840826995327,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "jade_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.067684,
+  "anP": 0.06793052545503855,
+  "mcE": 0.069876,
+  "anE": 0.07007358875426623,
+  "mcEV": 77311.672652,
+  "anEV": 77269.48938624829,
+  "mcShare": 0.07267831931786103,
+  "anShare": 0.07294393897594514,
+  "per": {
+   "solar_array": 0.019176,
+   "vein_core": 0.015388,
+   "gold_drone": 0.018908,
+   "void_ingot": 0.016404
+  },
+  "anPer": {
+   "gold_drone": 0.00252303909805457,
+   "solar_array": 0.0025681259448641397,
+   "vein_core": 0.002062792186742324,
+   "void_ingot": 0.002189187937574464
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "jade_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.117352,
+  "anP": 0.11781987376662673,
+  "mcE": 0.123812,
+  "anE": 0.12448935961478735,
+  "mcEV": 82935.245236,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.07305179493663733,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "vein_core": 0.047732,
+   "solar_array": 0.042428,
+   "gold_drone": 0.033652
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "jade_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.102976,
+  "anP": 0.10292978081789642,
+  "mcE": 0.108012,
+  "anE": 0.10789077833281573,
+  "mcEV": 81055.659052,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.0653782203732417,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "solar_array": 0.037164,
+   "vein_core": 0.042272,
+   "gold_drone": 0.028576
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "silver_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.067252,
+  "anP": 0.06793052545503855,
+  "mcE": 0.069396,
+  "anE": 0.07007358875426623,
+  "mcEV": 77220.570936,
+  "anEV": 77269.48938624829,
+  "mcShare": 0.07193516531500202,
+  "anShare": 0.07294393897594514,
+  "per": {
+   "void_ingot": 0.016092,
+   "solar_array": 0.019524,
+   "vein_core": 0.015108,
+   "gold_drone": 0.018672
+  },
+  "anPer": {
+   "gold_drone": 0.00252303909805457,
+   "solar_array": 0.0025681259448641397,
+   "vein_core": 0.002062792186742324,
+   "void_ingot": 0.002189187937574464
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "silver_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.117504,
+  "anP": 0.11781987376662673,
+  "mcE": 0.124016,
+  "anE": 0.12448935961478735,
+  "mcEV": 82855.329928,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.07302179368856015,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "solar_array": 0.042516,
+   "vein_core": 0.04758,
+   "gold_drone": 0.03392
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "silver_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.102188,
+  "anP": 0.10292978081789642,
+  "mcE": 0.106992,
+  "anE": 0.10789077833281573,
+  "mcEV": 80896.309748,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.06452133508017086,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "solar_array": 0.036928,
+   "vein_core": 0.040988,
+   "gold_drone": 0.029076
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "platinum_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.068832,
+  "anP": 0.06793052545503855,
+  "mcE": 0.070916,
+  "anE": 0.07007358875426623,
+  "mcEV": 77216.890936,
+  "anEV": 77269.48938624829,
+  "mcShare": 0.07424124471356196,
+  "anShare": 0.07294393897594514,
+  "per": {
+   "solar_array": 0.01932,
+   "void_ingot": 0.016792,
+   "gold_drone": 0.01906,
+   "vein_core": 0.015744
+  },
+  "anPer": {
+   "gold_drone": 0.00252303909805457,
+   "solar_array": 0.0025681259448641397,
+   "vein_core": 0.002062792186742324,
+   "void_ingot": 0.002189187937574464
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "platinum_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.117884,
+  "anP": 0.11781987376662673,
+  "mcE": 0.124416,
+  "anE": 0.12448935961478735,
+  "mcEV": 82920.963616,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.07355231446952412,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "vein_core": 0.048468,
+   "solar_array": 0.042444,
+   "gold_drone": 0.033504
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "platinum_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.103016,
+  "anP": 0.10292978081789642,
+  "mcE": 0.107928,
+  "anE": 0.10789077833281573,
+  "mcEV": 80969.387312,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.06507838133559718,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "vein_core": 0.041496,
+   "solar_array": 0.036976,
+   "gold_drone": 0.029456
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "crimson_hall",
+  "state": "postHM",
+  "N": 250000,
+  "mcP": 0.068612,
+  "anP": 0.06793052545503855,
+  "mcE": 0.070776,
+  "anE": 0.07007358875426623,
+  "mcEV": 77301.791508,
+  "anEV": 77269.48938624829,
+  "mcShare": 0.07390979635198651,
+  "anShare": 0.07294393897594514,
+  "per": {
+   "gold_drone": 0.018836,
+   "solar_array": 0.019624,
+   "void_ingot": 0.016656,
+   "vein_core": 0.01566
+  },
+  "anPer": {
+   "gold_drone": 0.00252303909805457,
+   "solar_array": 0.0025681259448641397,
+   "vein_core": 0.002062792186742324,
+   "void_ingot": 0.002189187937574464
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "crimson_hall",
+  "state": "HM(guarantee used)",
+  "N": 250000,
+  "mcP": 0.116876,
+  "anP": 0.11781987376662673,
+  "mcE": 0.123656,
+  "anE": 0.12448935961478735,
+  "mcEV": 83016.280948,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.072807799518097,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "vein_core": 0.047572,
+   "gold_drone": 0.03344,
+   "solar_array": 0.042644
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ },
+ {
+  "tid": "limited",
+  "hall": "crimson_hall",
+  "state": "HM first-open(guarantee pending)",
+  "N": 250000,
+  "mcP": 0.102848,
+  "anP": 0.10292978081789642,
+  "mcE": 0.107868,
+  "anE": 0.10789077833281573,
+  "mcEV": 80912.068304,
+  "anEV": 82942.78446896485,
+  "mcShare": 0.06523750187880255,
+  "anShare": 0.07339791528131986,
+  "per": {
+   "vein_core": 0.041684,
+   "solar_array": 0.037372,
+   "gold_drone": 0.028812
+  },
+  "anPer": {
+   "gold_drone": 0.004482339522447225,
+   "solar_array": 0.005703048968881696,
+   "vein_core": 0.006413192790642726,
+   "void_ingot": 0
+  },
+  "fee": 60000
+ }
+]

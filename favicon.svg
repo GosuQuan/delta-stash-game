@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#2a1a0e"/>
+  <rect x="7" y="7" width="50" height="50" rx="7" fill="#3b2614" stroke="#e0b44a" stroke-width="2.5"/>
+  <!-- 3x3 packing grid with an L-shaped and a square piece -->
+  <g stroke="#e0b44a" stroke-opacity=".35" stroke-width="1">
+    <path d="M23.7 12v40M40.3 12v40M12 23.7h40M12 40.3h40"/>
+  </g>
+  <path d="M14 14h19v9.7h-9.7v16.6H14z" fill="#f3c969"/>
+  <rect x="25" y="25" width="13" height="13" rx="2" fill="#c8892a"/>
+  <rect x="41" y="14" width="9" height="9" rx="2" fill="#6fcf97"/>
+  <rect x="31" y="41" width="19" height="9" rx="2" fill="#b07ae0"/>
+</svg>
