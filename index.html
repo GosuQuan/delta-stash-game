@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>仓储拍卖 · 集装箱开箱</title>
-  <link rel="stylesheet" href="style.css?v=20260926d" />
+  <link rel="stylesheet" href="style.css?v=20260926e" />
 </head>
 <body class="ads-off iap-off">
   <div id="app">
@@ -76,20 +76,12 @@
             <svg class="hdr-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .8-1 1.5v.6"/><path d="M12 17.1v.2"/></svg>
             <span class="hdr-label">帮助</span>
           </button>
-          <button type="button" id="btnDataPanel" class="hdr-btn eval-only" title="开箱/现金/厅/每日" hidden>
-            <svg class="hdr-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 20h17"/><path d="M7 16.5v-5M12 16.5V6.5M17 16.5v-8"/></svg>
-            <span class="hdr-label">数据</span>
-          </button>
           <div class="more-wrap">
             <button type="button" id="btnMore" class="hdr-btn more-btn" title="更多" aria-label="更多" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu">
               <svg class="hdr-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5.5" cy="12" r="1.3" class="ic-fill"/><circle cx="12" cy="12" r="1.3" class="ic-fill"/><circle cx="18.5" cy="12" r="1.3" class="ic-fill"/></svg>
               <span class="hdr-label">更多</span>
             </button>
             <div class="more-menu" id="moreMenu" role="menu" aria-label="更多操作" hidden>
-              <button type="button" id="btnEvalMode" class="more-item eval-btn eval-only" role="menuitem" title="评测档：?eval=1" aria-pressed="false" hidden>
-                <svg class="hdr-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3.5h6v3H9z"/><path d="M9 5H5.5v15.5h13V5H15"/><path d="M9 13.5l2 2 4-4"/></svg>
-                <span>评测面板</span>
-              </button>
               <button type="button" id="btnNewSave" class="more-item danger" role="menuitem" title="清除本地存档并重新开始">
                 <svg class="hdr-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3L3.5 8.3"/><path d="M3.5 3.5v4.8h4.8"/></svg>
                 <span>新开档</span>
@@ -378,7 +370,6 @@
       </div>
     </div>
 
-    <div id="monoDebug" class="mono-debug" hidden></div>
   </div>
     
     <div id="challengeModal" class="modal challenge-modal" hidden>
@@ -436,41 +427,10 @@
       </div>
     </div>
     
-    <aside id="evalPanel" class="eval-panel" hidden>
-      <header class="eval-panel-header">
-        <span>评测档</span>
-        <button type="button" id="btnEvalPanelClose" class="btn ghost eval-close-btn" title="仅收起面板">关闭</button>
-      </header>
-      <p id="evalHoneymoonLine">蜜月：—</p>
-      <p id="evalAdsLine">广告：强制关闭</p>
-      <p id="evalExpandLine">扩容（永久·现金）：6×6 ¥40,000 · 7×7 ¥120,000 · 8×8 ¥300,000</p>
-      <label class="eval-fx-row">结算特效
-        <select id="evalFxSelect" aria-label="结算特效">
-          <option value="smooth">流畅（默认）</option>
-          <option value="fancy">华丽</option>
-        </select>
-      </label>
-      <div class="eval-tools" id="evalTools">
-        <button type="button" id="btnEvalCash" class="btn ghost">+¥5万现金</button>
-        <button type="button" id="btnEvalForceBall" class="btn ghost" aria-pressed="false">强制跟随球</button>
-        <button type="button" id="btnEvalSoftChallenge" class="btn ghost" aria-pressed="false">软鉴宝门槛</button>
-        <button type="button" id="btnEvalExit" class="btn ghost danger-text">退出评测</button>
-      </div>
-      <p class="eval-tip">URL <code>?eval=1</code> · 可加 <code>&amp;ball=1</code> / <code>&amp;soft=1</code> · 广告强制关 · 可清档</p>
-    </aside>
-    <aside id="dataPanel" class="data-panel" hidden>
-      <header>数据</header>
-      <ul id="dataPanelList">
-        <li>开箱：—</li>
-        <li>现金：—</li>
-        <li>拍卖厅：—</li>
-        <li>每日：—</li>
-      </ul>
-    </aside>
 
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
-  <script src="platform.js?v=20260926d"></script>
-  <script src="audio.js?v=20260926d"></script>
-  <script src="game.js?v=20260926d"></script>
+  <script src="platform.js?v=20260926e"></script>
+  <script src="audio.js?v=20260926e"></script>
+  <script src="game.js?v=20260926e"></script>
 </body>
 </html>

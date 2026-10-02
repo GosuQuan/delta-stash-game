@@ -3101,7 +3101,7 @@ body.hall-crimson .btn.accent {
 }
 
 
-/* ----- Eval / data panels (评测档) ----- */
+/* ----- Eval / data panels (test build only; markup is injected by tools/build-test.js) ----- */
 body.eval-mode .eval-only { display: inline-flex !important; }
 body.eval-mode .fx-mode-btn,
 body.eval-mode #btnFxMode { outline: 1px dashed rgba(245, 197, 24, 0.7); }
@@ -3426,7 +3426,7 @@ body.wealth-gold .top-bar {
  * Owner feedback: the header row of mismatched text/emoji boxes wrapped on phones. Now:
  * .chip-row (钥匙 / 厅 / 距下一厅 / 今日最佳 / 下一柜 / 仓库) = uniform 24px pills;
  * .header-actions = same-size line-icon buttons (amber stroke 1.7, label under icon on phones, beside on PC);
- * 新开档 / 清档 (+ eval: 评测) live in the #moreMenu popover. Phones 360–430px: toolbar never wraps. */
+ * 新开档 / 清档 (+ eval panel item) live in the #moreMenu popover. Phones 360–430px: toolbar never wraps. */
 .top-bar { position: relative; z-index: 60; }
 .top-bar .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; min-width: 0; }
 .chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }

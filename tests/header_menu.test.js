@@ -16,11 +16,12 @@ let JSDOM;
 try { ({ JSDOM } = require("jsdom")); } catch (_) {
   console.error("jsdom missing — run `npm install` (devDependency) first."); process.exit(2);
 }
+const BT = require("../tools/build-test.js"); // injectEvalMarkup / injectEvalStrings: eval markup + strings exist only in the test build
 const DIR = process.env.GAME_DIR || path.join(__dirname, "..");
 
 function makeWorld(query, testBuild) {
   const css = fs.readFileSync(path.join(DIR, "style.css"), "utf8");
-  const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8")
+  const html = (testBuild ? BT.injectEvalMarkup : (x) => x)(fs.readFileSync(path.join(DIR, "index.html"), "utf8"))
     .replace(/<script[^>]*src=[^>]*><\/script>/g, "")
     .replace(/<link[^>]*rel="stylesheet"[^>]*>/, `<style>[hidden]{display:none}</style><style>${css}</style>`);
   const dom = new JSDOM(html, { runScripts: "outside-only", pretendToBeVisual: true, url: "https://example.test/" + (query || "") });
@@ -40,7 +41,7 @@ function makeWorld(query, testBuild) {
   w.confirm = (msg) => { w.__confirms.push(String(msg)); return false; };
   // ?eval=1 only does anything in the test build → flip the build flag for those worlds (public: see launch_j.test.js)
   let gsrc = fs.readFileSync(path.join(DIR, "game.js"), "utf8");
-  if (testBuild) gsrc = gsrc.replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true");
+  if (testBuild) gsrc = BT.injectEvalStrings(gsrc.replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true"));
   w.eval(gsrc);
   return w;
 }

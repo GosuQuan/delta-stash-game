@@ -18,6 +18,7 @@ let JSDOM;
 try { ({ JSDOM } = require("jsdom")); } catch (_) {
   console.error("jsdom missing — run `npm install` (devDependency) first."); process.exit(2);
 }
+const BT = require("../tools/build-test.js"); // injectEvalMarkup / injectEvalStrings: eval markup + strings exist only in the test build
 const DIR = process.env.GAME_DIR || path.join(__dirname, "..");
 const QKEY = "deltaStashAnalyticsQueue";
 const OFFKEY = "deltaStashAnalyticsOff";
@@ -46,7 +47,7 @@ function mulberry32(a) {
 
 function makeWorld(seed, opts = {}) {
   const css = fs.readFileSync(path.join(DIR, "style.css"), "utf8");
-  const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8")
+  const html = BT.injectEvalMarkup(fs.readFileSync(path.join(DIR, "index.html"), "utf8"))
     .replace(/<script[^>]*src=[^>]*><\/script>/g, "")
     .replace(/<link[^>]*rel="stylesheet"[^>]*>/, `<style>[hidden]{display:none}</style><style>${css}</style>`);
   const dom = new JSDOM(html, { runScripts: "outside-only", pretendToBeVisual: true, url: opts.url || "https://example.test/" });
@@ -72,7 +73,7 @@ function makeWorld(seed, opts = {}) {
   w.console.warn = () => {}; w.console.log = () => {};
   w.eval(`Math.random = (${mulberry32.toString()})(${seed});`);
   // eval sessions need the test-build flag; public-build eval-off is covered by tests/launch_j.test.js
-  const src = fs.readFileSync(path.join(DIR, "game.js"), "utf8").replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true");
+  const src = BT.injectEvalStrings(fs.readFileSync(path.join(DIR, "game.js"), "utf8").replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true"));
   const end = src.lastIndexOf("})();");
   if (end < 0) throw new Error("game.js IIFE close not found");
   w.eval(src.slice(0, end) + HOOK + src.slice(end));

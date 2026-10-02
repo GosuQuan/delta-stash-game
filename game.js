@@ -32,7 +32,7 @@
   // 普通 1.08–1.15 (recovery crate) · 精选 1.00–1.08 · 密封 1.02–1.12 · 限时 1.05–1.15; pricier = lower P(profit),
   // recouped mainly by big hits. Tuned by pool weights only (item prices global). See docs/sim/results.md.
   /** Release id — must match index.html ?v= ×4 and version.json (npm test enforces). */
-  const BUILD_VERSION = "20260926d";
+  const BUILD_VERSION = "20260926e";
   const STARTING_CASH = 15000;
   const MIN_FEE = 5000; // common fee
 
@@ -356,9 +356,13 @@
     ],
   };
 
+  // Eval-panel strings. EMPTY in the public build; tools/build-test.js fills this object when it generates /test/.
+  const EVAL_STR = {};
+  function evalStr(k) { return EVAL_STR[k] || ""; }
+
   const FEATURES = {
     // ===== BUILD FLAGS — the ONE place that separates the public build from the test build =====
-    // 正式版（根目录 / itch.io / CrazyGames）：EVAL_ALLOWED=false，评测/数据按钮与面板直接从 DOM 删除，
+    // 正式版（根目录 / itch.io / CrazyGames）：EVAL_ALLOWED=false，eval 面板/数据按钮的标记与文案根本不在公开源码里，
     // ?eval=1 ?ball ?soft ?mono 一律无效。/test/ 由 tools/build-test.js 从本文件生成，只改这两行
     // （EVAL_ALLOWED → true，BUILD_ENV → "test"）以及 localStorage 键前缀；npm test 校验 test/ 与生成结果一致。
     EVAL_ALLOWED: false,
@@ -4161,7 +4165,7 @@
     }
   }
 
-  // ----- Eval mode (评测档) -----
+  // ----- Eval mode (test build only) -----
   // j: eval is decided ONLY by the URL (?eval=1). The old localStorage flag kept a save in eval
   // (free 8×8, +¥50k) without the URL; it is now deleted on load and marks the save evalTainted.
   const EVAL_LS_KEY = "deltaStashEval"; // legacy — read once to taint, then removed
@@ -4221,7 +4225,7 @@
     try { localStorage.removeItem(EVAL_LS_KEY); } catch (_) { /* ignore */ }
     document.body.classList.toggle("eval-mode", evalMode);
     if (el.btnDataPanel) el.btnDataPanel.hidden = !evalMode;
-    // 评测 lives in the header ⋯ menu and only exists in an ?eval=1 session (test build); 清档 stays in ⋯ for everyone
+    // the eval-panel item lives in the header ⋯ menu and only exists in an ?eval=1 session (test build); 清档 stays in ⋯ for everyone
     if (el.btnEvalMode) el.btnEvalMode.hidden = !evalMode;
     if (!evalMode && el.dataPanel) el.dataPanel.hidden = true;
     // Mode ON → show panel by default (unless caller asks otherwise). Mode OFF → always hide.
@@ -4256,7 +4260,7 @@
     updateStats();
   }
 
-  /** Header 「⋯」 overflow popover (新开档 / 清档 / eval: 评测). Items keep their own handlers + confirms;
+  /** Header 「⋯」 overflow popover (新开档 / 清档 / eval panel item). Items keep their own handlers + confirms;
    *  the menu only opens/closes: outside tap, Esc, or picking an item closes it. */
   function initHeaderMoreMenu() {
     const btn = document.getElementById("btnMore");
@@ -4311,7 +4315,7 @@
     }
     const expLine = document.getElementById("evalExpandLine");
     if (expLine) {
-      expLine.textContent = `扩容（永久·现金）：6×6 ${formatYen(EXPAND_CASH_COSTS[6])} · 7×7 ${formatYen(EXPAND_CASH_COSTS[7])} · 8×8 ${formatYen(EXPAND_CASH_COSTS[8])} · 已拥有 ${ownedGridMax}×${ownedGridMax}（评测可自由切换尺寸）`;
+      expLine.textContent = `扩容（永久·现金）：6×6 ${formatYen(EXPAND_CASH_COSTS[6])} · 7×7 ${formatYen(EXPAND_CASH_COSTS[7])} · 8×8 ${formatYen(EXPAND_CASH_COSTS[8])} · 已拥有 ${ownedGridMax}×${ownedGridMax}${evalStr("freeSizeNote")}`;
     }
     if (el.evalFxSelect) {
       const mode = settleFxMode === "fancy" ? "fancy" : "smooth";
@@ -4320,7 +4324,7 @@
     // Surface honeymoon chip even after end while evaluating
     if (el.honeymoonHint && evalMode) {
       el.honeymoonHint.hidden = false;
-      el.honeymoonHint.textContent = hm ? "新手保护（评测）" : (honeymoonEnded ? "蜜月已结束（评测）" : "蜜月状态（评测）");
+      el.honeymoonHint.textContent = hm ? evalStr("hmProtected") : (honeymoonEnded ? evalStr("hmEnded") : evalStr("hmState"));
     }
     if (el.btnEvalForceBall) {
       el.btnEvalForceBall.setAttribute("aria-pressed", evalForceFollowBall ? "true" : "false");
@@ -4460,7 +4464,7 @@
   // ===== 匿名玩法统计（埋点）· 基于 tools/analytics/client-snippet.js（docs/埋点接入清单.md） =====
   // 不收个人信息：无姓名 / 账号 / IP / 指纹；pid 是 localStorage 里的随机串。
   // ENDPOINT 留空 = 只进本地队列（localStorage，≤ QUEUE_MAX 条），不发任何网络请求。
-  // 评测模式照常入队，每条带 eval: 1（查询默认排除）；玩家关闭「参与匿名统计」后什么都不记。
+  // eval sessions are queued as usual，每条带 eval: 1（查询默认排除）；玩家关闭「参与匿名统计」后什么都不记。
   const ANALYTICS = {
     SCHEMA: 1,
     ECON: "econ-0925h",        // 经济数值版本：只有调数值时才改，和发版号无关
@@ -7183,7 +7187,7 @@
       const base = `${v}×${v}`;
       o.textContent = locked ? `${base} 🔒` : base;
     }
-    sel.title = evalMode ? "评测：可自由切换仓库尺寸" : `仓库尺寸（已拥有至 ${ownedGridMax}×${ownedGridMax}；更大需「扩容」）`;
+    sel.title = evalMode ? evalStr("sizeTitle") : `仓库尺寸（已拥有至 ${ownedGridMax}×${ownedGridMax}；更大需「扩容」）`;
   }
 
   /** Resize the warehouse, returning placed items to staging (shared by dropdown / eval exit). */
@@ -7864,7 +7868,7 @@
         if (typeof fx === "function") fx("uiClick");
         cash += 50000;
         if (typeof peakCash !== "undefined" && cash > peakCash) peakCash = cash;
-        showToast("评测：现金 +¥50,000");
+        showToast(evalStr("toastCash"));
         if (typeof updateStats === "function") updateStats();
         if (typeof updateCrateButtons === "function") updateCrateButtons();
         if (typeof syncEvalPanel === "function") syncEvalPanel();
@@ -7877,7 +7881,7 @@
         if (!evalMode) return;
         if (typeof fx === "function") fx("uiClick");
         evalForceFollowBall = !evalForceFollowBall;
-        showToast(evalForceFollowBall ? "评测：跟随球 100%" : "评测：跟随球恢复 50%");
+        showToast(evalForceFollowBall ? evalStr("toastBallOn") : evalStr("toastBallOff"));
         syncEvalPanel();
       });
     }
@@ -7888,8 +7892,8 @@
         evalSoftChallenge = !evalSoftChallenge;
         showToast(
           evalSoftChallenge
-            ? "评测：鉴宝门槛降至 ≤¥8,000"
-            : "评测：鉴宝门槛恢复正式值"
+            ? evalStr("toastSoftOn")
+            : evalStr("toastSoftOff")
         );
         syncEvalPanel();
         if (typeof syncDataPanel === "function") syncDataPanel();

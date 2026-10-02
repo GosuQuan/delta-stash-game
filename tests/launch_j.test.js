@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Release 20260926d — launch checks (plain node + jsdom, real index.html + style.css + game.js).
+ * Release 20260926e — launch checks (plain node + jsdom, real index.html + style.css + game.js).
  *  1. Warehouse grid always has its cells (fresh load, owned 8×8, after settle → next round, after 清算重整) + visible grid lines in CSS.
  *  2. Hall hint 「距X还差 ¥Y」: [hidden] really hides (global rule), hint shows the gap to the NEXT hall and is hidden at the top hall.
  *  3. Touch: the touchmove guard only cancels while a drag is armed AND the event is cancelable; touch-action on draggables / grid.
@@ -35,9 +35,10 @@ const HOOK = `
   };
 `;
 
+const BT = require("../tools/build-test.js"); // injectEvalMarkup / injectEvalStrings: eval markup + strings exist only in the test build
 function makeWorld({ dir = ROOT, query = "", save = null, ls = {}, prefix = "", flipEval = false, confirmOk = true } = {}) {
   const css = fs.readFileSync(path.join(dir, "style.css"), "utf8");
-  const html = fs.readFileSync(path.join(dir, "index.html"), "utf8")
+  const html = (flipEval ? BT.injectEvalMarkup : (x) => x)(fs.readFileSync(path.join(dir, "index.html"), "utf8"))
     .replace(/<script[^>]*src=[^>]*><\/script>/g, "")
     .replace(/<link[^>]*rel="stylesheet"[^>]*>/, `<style>${css}</style>`);
   const dom = new JSDOM(html, { runScripts: "outside-only", pretendToBeVisual: true, url: "https://example.test/" + query });
@@ -58,7 +59,7 @@ function makeWorld({ dir = ROOT, query = "", save = null, ls = {}, prefix = "", 
   for (const [k, v] of Object.entries(ls)) w.localStorage.setItem(k, v);
   w.console.warn = () => {}; w.console.log = () => {};
   let src = fs.readFileSync(path.join(dir, "game.js"), "utf8");
-  if (flipEval) src = src.replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true");
+  if (flipEval) src = BT.injectEvalStrings(src.replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true"));
   const end = src.lastIndexOf("})();");
   w.eval(src.slice(0, end) + HOOK + src.slice(end));
   if (!w.__T) throw new Error("test hook not installed");
@@ -219,6 +220,18 @@ async function main() {
   {
     const src = fs.readFileSync(path.join(ROOT, "game.js"), "utf8");
     check(/EVAL_ALLOWED:\s*false,/.test(src) && /BUILD_ENV:\s*"public"/.test(src), "root game.js: EVAL_ALLOWED false, BUILD_ENV public");
+    // 20260926e: the public page SOURCE carries no 评测 at all (markup + strings are injected only into /test/ by tools/build-test.js)
+    for (const f of ["index.html", "game.js", "style.css", "audio.js", "platform.js", "version.json"]) {
+      const txt = fs.readFileSync(path.join(ROOT, f), "utf8");
+      check(!/评测/.test(txt), `public source ${f}: zero 「评测」 (view-source clean)`);
+    }
+    {
+      const pubHtml = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+      check(!/id="(evalPanel|dataPanel|btnEvalMode|btnDataPanel|monoDebug|btnEvalExit|btnEvalCash)"/.test(pubHtml) && !/class="hdr-label">数据</.test(pubHtml), "public index.html: no eval panel / data button / monoDebug nodes");
+      const th = fs.readFileSync(path.join(ROOT, "test", "index.html"), "utf8");
+      check(/id="evalPanel"/.test(th) && /id="btnDataPanel"/.test(th) && /id="btnEvalMode"/.test(th) && /评测/.test(th), "test/index.html: eval panel + 数据 button + eval menu item injected");
+      check(/评测/.test(fs.readFileSync(path.join(ROOT, "test", "game.js"), "utf8")), "test/game.js: eval strings injected");
+    }
     const w = makeWorld({ query: "?eval=1&ball=1&soft=1&mono=1", ls: { deltaStashMonoDebug: "1" } }); await settle(); const T = w.__T;
     const d = w.document;
     check(T.FEATURES.EVAL_ALLOWED === false && T.evalMode === false, "public ?eval=1: eval mode off");
