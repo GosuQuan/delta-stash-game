@@ -413,7 +413,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | launch_j 对照截图（launch-j · ~13:06） | ✅ 本轮已推（对照 d 请验） | 正式版/测试版各有 fresh·header(360/390/412)·more-menu·broken-items-in-grid·card-vs-highlight；测试版另有 `test-eval*.png` / `test-eval-more-menu-390`（⋯ 含「评测面板」）；正式版顶栏未见评测入口（`public-header-*`）。文件名示意测格子渲染/卡片vs高亮；**是否完全无残影待肉眼细读** |
 | 正式/测试拆分 + 顶栏 + 异形 L（line8-d · d→e） | ✅ 本轮已推 | Console：`A1-public-e-console` / `A1-old-save-e-console` 正式版 `game.js?v=20260926e` 且 `?eval=1` 无评测控件；`B-version-e-console` 测试版标题 `[测试版]` + `?v=20260926e`；`B3-analytics-e-console` 埋点 `build=20260926e-test`。`C-topbar-{360,390,412}`（及 `*-nomenu`）顶栏收纳；`C-shape-L` / `C-shape-L-incognito` L 形物件在格内可见图标（对照 d 异形修复）。老档续玩见场次34·白银厅（`A1-old-save-e`） |
 | f 版欢迎名 / 旋转90° / 厅提示 / plus·十字（line9-f） | ✅ 本轮已推 | 欢迎 **STASH AUCTION**（`A1-public-welcome`）；旋转连点 +90° 有 `/workspace/cross-check` 对 f 全绿（含 post-place ↻×4）支撑，15:34 交接放行；厅提示：新档见「距离青铜还差 ¥25,000」（`A4-test-fresh-initial`），加钱至 ¥65,000 见「距离翡翠还差 ¥15,000」（`A4-test-after-plus50k-hint`），再至 ¥115,000 进翡翠后提示消失（`A4-test-after-plus100k-hint-hidden`）；plus 触屏装箱（`B-plus-*`）；十字自然游玩截图场次23 / 重置场次6 暂存未见十字（`B-cross-22rounds-no-cross` / `B-cross-fresh-reset-6`），种档补验见 cross-check **96/96** |
-| g 四项复核（line10-g · `?v=20260926g`） | ✅ 本轮已推 | 真机截图：桌面/390 点选落在已占格对照（`occupied-desktop-blocked` / `occupied-390-touch-blocked`）。自动化：`/workspace/g-verify/live2.txt` 正式+测试 × 桌面+390 **106 passed / 0 failed**——覆盖 favicon 200、旋转×4 即时写入存档 `[1,2,3,0]`、点选落点被占/锚点格、以及 `__analyticsLog` 的 `crate_open.loot_ids` / `round_settle.loot_ids` / `sold_ids` / `dropped_ids`（`物品id:数量`，build=`20260926g` / `20260926g-test`）。本轮 curl favicon 亦 200 |
+| g 四项复核（line10-g · `?v=20260926g`） | ⏳ 进行中（我的真机复核未完成；下列为 grok 自动化与不完整截图，不算我的结论） | 真机截图：桌面/390 点选落在已占格对照（`occupied-desktop-blocked` / `occupied-390-touch-blocked`）。自动化：`/workspace/g-verify/live2.txt` 正式+测试 × 桌面+390 **106 passed / 0 failed**——覆盖 favicon 200、旋转×4 即时写入存档 `[1,2,3,0]`、点选落点被占/锚点格、以及 `__analyticsLog` 的 `crate_open.loot_ids` / `round_settle.loot_ids` / `sold_ids` / `dropped_ids`（`物品id:数量`，build=`20260926g` / `20260926g-test`）。本轮 curl favicon 亦 200 |
 | 冲资金 ~30 万 | ⏳ 未闭环 | line7 续玩档约 ¥17.8万；`line9-f/B-plus-390-touch` 测试版画面现金约 ¥30万+ / 铂金厅（评测/测试口径，**非**稳健档自然冲刺证据） |
 | 专属厅柜批次1（青铜杂货 / 翡翠夜班 / 白银双联） | ⏳ 未开踩 | 新截图柜列表仍为普通/精选/密封（±限时）；未见专属柜 UI（⑩ 记 `hall-crates-b1` 未合 main） |
 
@@ -447,7 +447,7 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 | 欢迎弹窗公开名 STASH AUCTION（f） | **建议 ✅**（`line9-f/A1-public-welcome.png`） |
 | 旋转每次恰好 90°（f） | **建议 ✅**（cross-check 对 f：pre/post-place ↻×4 全绿；g-verify live 旋转即时存档 `[1,2,3,0]`） |
 | 厅距离提示（f） | **建议 ✅**（`A4-test-fresh-initial` / `A4-test-after-plus50k-hint` / `A4-test-after-plus100k-hint-hidden`） |
-| g 点选落点被占 / 旋转即时存档 / favicon / 埋点 loot_ids（g） | **建议 ✅**（line10-g 截图 + `g-verify/live2.txt` 106/0；正式+测试×桌面+390） |
+| g 点选落点被占 / 旋转即时存档 / favicon / 埋点 loot_ids（g） | **待我真机复核**（grok 自动化 `g-verify/live2.txt` 106/0 仅作参考；我的真机截图只有两张点选落点被占，占位是否重叠未判定） |
 | 限时空柜空箱 / 退租兜底 | **🔄 修复已上（c→现 20260926g）待真机复测**；里程碑 20/35 × 折扣尚未开踩 |
 | 中盘经济体感 | 🔄 样本续积；继续冲赤金 / ~30万（自然口径） |
 | 经济重调 / 蜜月价（d+） | 🔄 部分：line7 新档见普通蜜月租 **¥3,150**、精选 **¥11,050**、蜜月上限 ¥35,000·场次 1/5（`14-new-save.png`）；稳健档打到 8 万 / 专属厅柜批次1 **未开踩** |
@@ -499,4 +499,4 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 - **2026-10-02 ~15:47–15:58** · line10-g（对照 ⑩ g 四项 · 线上已是 **`?v=20260926g`**；截图 `docs/playtest-shots/line10-g/` + 本机 `g-verify/live2.txt`）：
   - **自动化（15:47）**：正式版+测试版 × 桌面1280 + 手机390，**106 passed / 0 failed**。样例埋点：`crate_open`/`round_settle` 带 `loot_ids`（如 `bandage:1,canteen:1,…`），结算含 `sold_ids` / `dropped_ids`；`build=20260926g` 或 `20260926g-test`；favicon/apple-touch 请求 200、无根路径 `/favicon.ico` 误求；旋转×4 存档 `rot` 序列 `[1,2,3,0]`；点选落在已占角/锚点格用例通过。
   - **真机截图（~15:58）**：`occupied-desktop-blocked.webp`（正式版桌面，L 形「航拍机零件」落点高亮叠已占格）；`occupied-390-touch-blocked.webp`（390 触屏，断续灯带落点高亮）。本轮 curl 正式版 `favicon.svg`/`favicon.ico` 均为 200。
-  - **结论**：g 约定四项（点选被占、旋转即时存档、favicon、埋点 loot_ids/sold_ids/dropped_ids）**建议放行**；itch 压缩包可交少权上传。空柜里程碑 / 稳健 8 万 / 自然冲 30 万 / 专属柜仍未踩。
+  - **结论**：g 四项 **尚未得出结论**：我的真机复核被中断，仅有两张点选落点被占截图（占位是否重叠待判定），favicon / 旋转存档 / 埋点字段待真机补测；上面 106/0 是 grok 自动化，不替代我的结论。itch 包暂不放行，等我报结论。空柜里程碑 / 稳健 8 万 / 自然冲 30 万 / 专属柜仍未踩。
