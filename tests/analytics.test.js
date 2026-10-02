@@ -71,7 +71,8 @@ function makeWorld(seed, opts = {}) {
   for (const [k, v] of Object.entries(opts.ls || {})) w.localStorage.setItem(k, v);
   w.console.warn = () => {}; w.console.log = () => {};
   w.eval(`Math.random = (${mulberry32.toString()})(${seed});`);
-  const src = fs.readFileSync(path.join(DIR, "game.js"), "utf8");
+  // eval sessions need the test-build flag; public-build eval-off is covered by tests/launch_j.test.js
+  const src = fs.readFileSync(path.join(DIR, "game.js"), "utf8").replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true");
   const end = src.lastIndexOf("})();");
   if (end < 0) throw new Error("game.js IIFE close not found");
   w.eval(src.slice(0, end) + HOOK + src.slice(end));
@@ -242,6 +243,7 @@ async function main() {
   sel.value = "5"; sel.dispatchEvent(new wx.Event("change")); await waitFor(() => false, 3);
   X.tryExpandWarehouse(); await clickOk(); // free switch back up to owned 6×6
   check(X.gridSize() === 6 && expands().length === 1, "free switch to owned size: no new event");
+  wx.history.replaceState(null, "", "/?eval=1"); // j: eval only with ?eval=1 in the URL
   X.setEvalMode(true);
   sel.value = "8"; sel.dispatchEvent(new wx.Event("change")); await waitFor(() => false, 3);
   check(X.gridSize() === 8 && X.ownedGridMax === 6, `eval dropdown switched to 8×8 without buying (grid ${X.gridSize()} owned ${X.ownedGridMax})`);

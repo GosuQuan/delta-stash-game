@@ -61,7 +61,8 @@ function makeWorld(seed, saveRaw) {
   if (saveRaw) w.localStorage.setItem("deltaStashSave", saveRaw);
   w.console.warn = () => {}; w.console.log = () => {};
   w.eval(`Math.random = (${mulberry32.toString()})(${seed});`);
-  const src = fs.readFileSync(path.join(DIR, "game.js"), "utf8");
+  // eval sessions need the test-build flag; public-build eval-off is covered by tests/launch_j.test.js
+  const src = fs.readFileSync(path.join(DIR, "game.js"), "utf8").replace("EVAL_ALLOWED: false", "EVAL_ALLOWED: true");
   const end = src.lastIndexOf("})();");
   if (end < 0) throw new Error("game.js IIFE close not found");
   w.eval(src.slice(0, end) + HOOK + src.slice(end));
@@ -141,6 +142,7 @@ async function main() {
   sel.value = "8"; sel.dispatchEvent(new w3.Event("change"));
   await waitFor(() => false, 3);
   check(T3.gridSize() === 5 && sel.value === "5" && T3.cash === c3, `dropdown cannot jump to 8×8 for free (grid ${T3.gridSize()} sel=${sel.value} cash=${T3.cash})`);
+  w3.history.replaceState(null, "", "/?eval=1"); // j: eval only with ?eval=1 in the URL
   T3.setEvalMode(true);
   check([...sel.options].every((o) => !o.disabled), "eval mode: all sizes selectable");
   sel.value = "8"; sel.dispatchEvent(new w3.Event("change"));

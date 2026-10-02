@@ -198,26 +198,30 @@ python3 -m http.server 8765
 ### 发版清单（每次发版必做）
 
 - 每次发版：`?v=` ×4（`index.html` 里 style.css / platform.js / audio.js / game.js）+ 根目录 `version.json` + `game.js` 的 `BUILD_VERSION` 一起改成同一个版本号，然后 `npm test`（`tests/version_check.test.js` 会校验三处一致，不一致就挂）。
+- **正式版 + 测试版同版本、一次推送（20260926d 起）**：根目录是正式版（评测 / 数据 / `?eval=1` / `?ball` / `?soft` / `?mono=1` 全部关死，唯一开关是 `game.js` 里 `FEATURES.EVAL_ALLOWED = false`）；`/test/` 是测试版，由 `tools/build-test.js` 从根目录文件生成，只差 `EVAL_ALLOWED=true`、`BUILD_ENV="test"`、localStorage / sessionStorage 键前缀 `test_`（同域名不串档）、标题 `[测试版]` + 右下角小标签。**只改根目录文件，不手改 `test/`。**
+- 发版流程（每次都按顺序）：①改版本号（4 个 `?v=` + `version.json` + `BUILD_VERSION`）→ ②`node tools/build-test.js` 重新生成 `test/` → ③`npm install && npm test`（含 `node tools/build-test.js --check`：`test/` 与生成结果不一致就挂；另校验正式版 eval 全关、测试版 `?eval=1` 才有评测）→ ④删掉 `package-lock.json`（不提交）→ ⑤`git pull --rebase` 后**只推一次**（后一次推送会顶掉前一次的 Pages build，两次之间隔 3 分钟以上）→ ⑥确认 Pages build `built`，用 cache-buster curl **两个**地址的 `version.json`：`https://gosuquan.github.io/delta-stash-game/version.json` 和 `https://gosuquan.github.io/delta-stash-game/test/version.json`，都必须是新版本号 → ⑦无头浏览器过一遍线上（正式版 `?eval=1` 无评测控件、`/test/?eval=1` 有）。
 - 推 main 后确认 Pages build `built`，再用 cache-buster curl 线上 `index.html`（4 个 `?v=`）和 `version.json`。
 - 跑着 `20260925d` 及以后版本的老标签页，会在下一场结算后提示「有更新，刷新后继续」（c 及更早的标签页没有这段代码，不会提示）（不会自动刷新；开箱 / 揭示 / 装箱中不提示），点「刷新」先存档再刷新。
 
 ### itch 打包
 
-根目录必须是可玩入口（**不要**再包一层文件夹）：
+根目录必须是可玩入口（**不要**再包一层文件夹）。打包用**根目录（正式版）**文件，**不要**把 `test/` 打进去（测试版带评测面板）：
 
 ```bash
 cd /workspace/delta-stash-game
-zip -r ../delta-stash-game-itch.zip index.html style.css game.js audio.js
+zip -r ../delta-stash-game-itch.zip index.html style.css game.js audio.js platform.js version.json
 ```
 
 itch 选择 “This file will be played in the browser”，确保 zip 顶层可见 `index.html`。
 
-### 评测档（已实装）
+### 评测档（已实装；20260926d 起只存在于测试版）
+
+> 正式版（根目录 / itch / CrazyGames）没有评测档：`FEATURES.EVAL_ALLOWED=false`，评测 / 数据按钮和面板直接从 DOM 删掉，`?eval=1` `?ball` `?soft` `?mono=1` 无效，旧 `localStorage.deltaStashEval` 不再生效（启动时删掉并把存档标 `evalTainted`）。评测请用测试版 **https://gosuquan.github.io/delta-stash-game/test/?eval=1**（存档独立，埋点 `build` 带 `-test`、`econ=test`、`env=test`）。
 
 | 入口 | 行为 |
 |---|---|
-| URL `?eval=1` | 进入评测档（localStorage `deltaStashEval=1` 可持久） |
-| 顶栏「评测」 | 同样进出评测档 |
+| 测试版 URL `?eval=1` | 进入评测档（只认 URL，不再持久到 localStorage） |
+| 顶栏 ⋯ →「评测面板」 | 仅 `?eval=1` 会话里有，开关面板 |
 | 评测档内 | **强制广告关**；展示蜜月状态；结算特效切换常显；**清档**；简易**数据**面板（开箱数 / 现金 / 拍卖厅 / 每日任务） |
 | 结算旁「报 bug」 | 复制诊断 JSON（现金、场次、厅、蜜月、特效、FEATURES、近期 `__monetizationLog`） |
 
@@ -265,9 +269,15 @@ itch 选择 “This file will be played in the browser”，确保 zip 顶层可
 
 ## ⑩ 冲刺日志（每 ~25 分钟刷新）
 
-> 最近更新：2026-09-25 16:20 Asia/Shanghai · 负责人：游戏grok
+> 最近更新：2026-10-02 Asia/Shanghai · 负责人：游戏grok（20260926d 上线前一轮）
 
 ### 本轮已交付
+- **上线前一轮（`?v=20260926d`，正式版 + 测试版同版本一次推送）**：**数值没动，广告 / 内购保持关闭。**
+  - 修「异形物件放进仓库后图标消失、拖不动」：根因是图标和拖拽把手只画在包围盒左上角 (0,0) 那一格，而 J / S / plus / cross 本身以及旋转后的 L / L2 / T / Z / skew / stair / hook / corner / bigL 的 (0,0) 是**空格**。现在图标放在「最靠近包围盒中心的已占格」，每个已占格都是把手。物件一直在 `placed` 里，结算按 `placed` 算，没丢；只有「拖到半空时存档 / 结算」会丢——已修（拖拽中的物件按原位置进存档，结算前先取消拖拽）。迷你形状改成单一形状源（卡片 / 拖影 / 落位高亮 / 占格同一份，含旋转）。
+  - 转运仓库格子线所有布局都画（原来手机空仓像一块黑板）；全局 `[hidden]{display:none !important}`，修拍卖厅提示卡在「距青铜还差 ¥25,000」；触屏 touchmove 改一个常驻非被动监听、仅 `cancelable` 时 `preventDefault`，网格空闲时不再 `touch-action:none`（消除 Console 警告）。
+  - 结算前自检：状态里的物件数 vs 网格 DOM 里的图标数，不一致就发 `ui_anomaly`（物件 id / shape / rotated / 屏宽）并重绘自愈，结算永远按状态算。
+  - 评测污染：启动时发现旧 `deltaStashEval` 就删掉并给存档永久标 `evalTainted:true`（破产重整保留，只有新开档清零）；带 `?eval=1` 玩过的存档也标；不回收现金 / 尺寸。埋点公共字段加 `eval_tainted: 1|0`（与 `tools/analytics/client-snippet.js` 一致）。
+  - 正式版 / 测试版拆分 + 顶栏收纳（⋯ 菜单：新开档 / 清档；正式版没有评测 / 数据）见 ⑤ 发版流程。新增测试：`ui_shapes`（全部 24 种形状 × 4 个朝向放入 / 拖出 / 存档重载）、`launch_j`（格子必渲染、厅提示、触屏、破产保留尺寸、评测污染、正式版评测全关、测试版同步）、`header_menu`；`tools/ui_drag_check.js` 是浏览器端全量拖拽扫描（不进 `npm test`；本版实测 129 件 × 2 朝向 × 鼠标 / 触屏 = 516 例，0 失败）。
 - **匿名玩法统计接入（`?v=20260925i`）**：按 `docs/埋点接入清单.md` 接入 12 个事件（开柜 / 结算 / 守住挑战 / 破产 / 重整 / 新开档 / 拍卖厅解锁 / 峰值节点 / 扩容 / 整理 / 会话开始与结束），公共字段带 `econ=econ-0925h`、`save`、`eval`。`ENDPOINT` 暂时留空，事件只存进本机 localStorage 队列（最多 200 条），不发任何网络请求。评测档照常记录，每条带 `eval=1`。免费券开柜记 `rent_paid=0`、`discount=free_token`，方便从比值里排除。扩容只在「扩容」键现金扣款成功后记一次（`via=cash`），评测档下拉切尺寸不记。帮助页新增说明和「参与匿名统计」开关（默认开，关掉后清空队列、不再记录）。**数值未改动。** 新增 `tests/analytics.test.js`，`npm test` 六套全绿。
 - **扩容改分级永久现金价（`?v=20260925h`）**：游戏商业化反馈原来固定 ¥6,000 / 级太便宜（5→8 共 ¥18,000）。改为 5→6 **¥40,000**、6→7 **¥120,000**、7→8 **¥300,000**，永久拥有（存档新增 `ownedGridMax`，老档已扩的尺寸保留）。现金不够时扩容键显示价格并置灰，悬停提示还差多少，不会出现真钱价。确认时会再核一次现金，绝不扣成负数。顶栏「仓库」下拉原来能免费直接选 8×8，是个绕过扣费的漏洞：现在非评测只能选已拥有的尺寸（未拥有的带 🔒），评测档可自由切换，退出评测后回到已拥有尺寸；切回已拥有的更大尺寸免费。帮助说明和评测面板都列了三档价格。新增 `tests/expand_cost.test.js`（三档精确扣费、现金不足不扣、不为负、下拉锁、存档永久、老档兼容），`npm test` 五套全绿。
 - **手机格子放大 + 触屏拖拽抬高 + 试玩版去真钱价（`?v=20260925g`，`d13693b`）**：
